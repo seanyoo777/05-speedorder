@@ -4,7 +4,7 @@ import { classifyConditionalOutcome } from '../../engine/conditionalOrderRunner'
 import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
-import { roundToLotSize, roundToTickSize } from '../../utils/rounding'
+import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
 
 export function StopMitOrderPanel() {
@@ -24,8 +24,8 @@ export function StopMitOrderPanel() {
   const pos = positions.find((p) => p.symbol === symbol && p.size > 0)
 
   const preview = useMemo(() => {
-    const tp = roundToTickSize(Number(triggerPrice), spec.tickSize)
-    const q = roundToLotSize(Number(quantity), spec.lotSize)
+    const tp = roundPriceBySpec(spec, Number(triggerPrice))
+    const q = roundQtyBySpec(spec, Number(quantity))
     if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return '—'
     return classifyConditionalOutcome(pos, side, q)
   }, [pos, side, triggerPrice, quantity, spec])
@@ -36,8 +36,8 @@ export function StopMitOrderPanel() {
   )
 
   const submit = () => {
-    const tp = roundToTickSize(Number(triggerPrice), spec.tickSize)
-    const q = roundToLotSize(Number(quantity), spec.lotSize)
+    const tp = roundPriceBySpec(spec, Number(triggerPrice))
+    const q = roundQtyBySpec(spec, Number(quantity))
     if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return
     registerConditionalOrder({ kind, side, triggerPrice: tp, quantity: q })
   }

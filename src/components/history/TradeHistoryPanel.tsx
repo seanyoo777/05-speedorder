@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { HistoryTab } from '../../types/trading'
 import { formatPrice, formatQty, formatSignedUsd } from '../../utils/format'
 import { safeArray } from '../../utils/safe'
+import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
 import { PanelShell } from '../common/PanelShell'
 
@@ -80,7 +81,12 @@ export function TradeHistoryPanel() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-so-muted">{f.time}</span>
-                    <span className="text-white">{f.symbol}</span>
+                    <span className="text-white">
+                      {f.symbol}
+                      <span className="ml-1 rounded bg-so-border px-1 text-[9px] uppercase text-so-muted">
+                        {getSymbolSpec(f.symbol).marketType}
+                      </span>
+                    </span>
                     <span className={f.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
                       {f.side === 'buy' ? 'BUY' : 'SELL'}
                     </span>
@@ -111,7 +117,12 @@ export function TradeHistoryPanel() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
                 >
                   <span className="text-so-muted">{o.time}</span>
-                  <span className="text-white">{o.symbol}</span>
+                  <span className="text-white">
+                    {o.symbol}
+                    <span className="ml-1 rounded bg-so-border px-1 text-[9px] uppercase text-so-muted">
+                      {getSymbolSpec(o.symbol).marketType}
+                    </span>
+                  </span>
                   <span className="text-so-muted">{o.type === 'market' ? 'MKT' : 'LMT'}</span>
                   <span className={o.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
                     {o.side.toUpperCase()}
@@ -137,7 +148,12 @@ export function TradeHistoryPanel() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
                 >
                   <span className="text-so-muted">{o.time}</span>
-                  <span className="text-white">{o.symbol}</span>
+                  <span className="text-white">
+                    {o.symbol}
+                    <span className="ml-1 rounded bg-so-border px-1 text-[9px] uppercase text-so-muted">
+                      {getSymbolSpec(o.symbol).marketType}
+                    </span>
+                  </span>
                   <span className="text-so-muted">{o.type === 'market' ? 'MKT' : 'LMT'}</span>
                   <span className={o.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
                     {o.side.toUpperCase()}

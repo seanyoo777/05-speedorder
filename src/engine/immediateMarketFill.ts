@@ -3,7 +3,7 @@ import { mergeRiskSnapshotWithPositions } from '../domain/risk'
 import { getSymbolSpec } from '../symbols/registry'
 import type { OrderRecordRow, OrderSide } from '../types/trading'
 import type { TradingStore } from '../store/tradingStoreTypes'
-import { roundToLotSize } from '../utils/rounding'
+import { roundQtyBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
 import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
 
@@ -19,7 +19,7 @@ export function executeImmediateMockMarketOrder(
   if (st.mockOrderInFlightId != null) return false
 
   const spec = getSymbolSpec(st.symbol)
-  const qty = roundToLotSize(Number(input.quantity), spec.lotSize)
+  const qty = roundQtyBySpec(spec, Number(input.quantity))
   if (!Number.isFinite(qty) || qty <= 0) return false
 
   const px = st.lastPrice

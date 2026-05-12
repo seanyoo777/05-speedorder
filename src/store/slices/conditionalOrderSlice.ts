@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand'
 import type { ConditionalOrderKind, ConditionalOrderRow, OrderSide } from '../../types/trading'
 import { getSymbolSpec } from '../../symbols/registry'
-import { roundToLotSize, roundToTickSize } from '../../utils/rounding'
+import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
 import { safeArray } from '../../utils/safe'
 import type { TradingStore } from '../tradingStoreTypes'
 
@@ -24,8 +24,8 @@ export const createConditionalOrderSlice: StateCreator<
   }) => {
     const sym = get().symbol
     const spec = getSymbolSpec(sym)
-    const tp = roundToTickSize(Number(input.triggerPrice), spec.tickSize)
-    const qty = roundToLotSize(Number(input.quantity), spec.lotSize)
+    const tp = roundPriceBySpec(spec, Number(input.triggerPrice))
+    const qty = roundQtyBySpec(spec, Number(input.quantity))
     if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(qty) || qty <= 0) return
 
     const ts = Date.now()

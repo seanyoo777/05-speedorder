@@ -50,6 +50,7 @@ export const initialTickers: TickerRow[] = [
   mkTicker('bnb', 'BNB', 'BNBUSDT', getSymbolSpec('BNBUSDT').referencePrice, 0.08),
   mkTicker('ndx', 'NDX', 'NASDAQ', getSymbolSpec('NASDAQ').referencePrice, 0.09),
   mkTicker('gold', 'GOLD', 'GOLD', getSymbolSpec('GOLD').referencePrice, 0.31),
+  mkTicker('aapl', 'AAPL', 'AAPL', getSymbolSpec('AAPL').referencePrice, -0.04),
 ]
 
 export const initialPositions: PositionRow[] = [

@@ -1,6 +1,7 @@
 /** 모의·확장용 리스크 스냅샷 (TGX/MockInvest가 주입) */
 import { getSymbolSpec } from '../symbols/registry'
 import type { PositionRow } from '../types/trading'
+import { calculateMarginBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
 
 export type RiskSnapshot = {
@@ -25,9 +26,9 @@ export function deriveRiskSnapshotFromPositions(
   let used = 0
   for (const p of safeArray(positions)) {
     if (!Number.isFinite(p.size) || p.size <= 0) continue
-    const lev = getSymbolSpec(p.symbol).defaultLeverage
-    const l = lev > 0 ? lev : 1
-    used += (Math.abs(p.avgPrice) * Math.abs(p.size)) / l
+    const spec = getSymbolSpec(p.symbol)
+    const mark = Number.isFinite(p.avgPrice) && p.avgPrice > 0 ? p.avgPrice : spec.referencePrice
+    used += calculateMarginBySpec(spec, mark, p.size)
   }
   return {
     freeUsdt: Number.isFinite(freeUsdt) ? freeUsdt : DEFAULT_RISK_SNAPSHOT.freeUsdt,

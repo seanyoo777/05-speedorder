@@ -3,7 +3,7 @@ import { mergeRiskSnapshotWithPositions } from '../domain/risk'
 import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
 import { getSymbolSpec } from '../symbols/registry'
 import type { OrderRecordRow, OrderSide } from '../types/trading'
-import { roundToLotSize, roundToTickSize } from '../utils/rounding'
+import { roundPriceBySpec, roundQtyBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
 import type { TradingStore } from '../store/tradingStoreTypes'
 
@@ -25,7 +25,7 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
 
     const spec = getSymbolSpec(state.symbol)
     const rawQty = Number(input.quantity)
-    const qty = roundToLotSize(rawQty, spec.lotSize)
+    const qty = roundQtyBySpec(spec, rawQty)
     if (!Number.isFinite(qty) || qty <= 0) return Promise.resolve()
 
     const rawExec =
@@ -35,10 +35,10 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
 
     if (!Number.isFinite(rawExec) || rawExec <= 0) return Promise.resolve()
 
-    const execPrice = roundToTickSize(rawExec, spec.tickSize)
+    const execPrice = roundPriceBySpec(spec, rawExec)
     const limitStored =
       input.orderType === 'limit'
-        ? roundToTickSize(Number(input.limitPrice ?? rawExec), spec.tickSize)
+        ? roundPriceBySpec(spec, Number(input.limitPrice ?? rawExec))
         : null
 
     const id = `o-${Date.now()}`

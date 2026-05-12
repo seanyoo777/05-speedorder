@@ -2,6 +2,8 @@ import type { StateCreator } from 'zustand'
 import { estimateTradeFee, revaluePositions } from '../../engine/mockExecutionEngine'
 import type { TradeFillRow } from '../../types/trading'
 import { mergeRiskSnapshotWithPositions } from '../../domain/risk'
+import { getSymbolSpec } from '../../symbols/registry'
+import { calculatePnlBySpec, feeNotionalAbsBySpec } from '../../utils/specInstrument'
 import { safeArray } from '../../utils/safe'
 import { bootPositions } from '../boot'
 import type { TradingStore } from '../tradingStoreTypes'
@@ -33,12 +35,17 @@ export const createPositionSlice: StateCreator<
         (pos.symbol === s.symbol && Number.isFinite(s.lastPrice) ? s.lastPrice : undefined) ??
         pos.avgPrice
       const mark = Number.isFinite(markRaw) && markRaw > 0 ? markRaw : pos.avgPrice
+      const spec = getSymbolSpec(pos.symbol)
       const qty = pos.size
       if (!Number.isFinite(qty) || qty <= 0) return {}
-      const gross =
-        pos.side === 'long' ? (mark - pos.avgPrice) * qty : (pos.avgPrice - mark) * qty
-      const notional = Math.abs(mark * qty)
-      const fee = estimateTradeFee(notional)
+      const gross = calculatePnlBySpec(spec, {
+        op: 'close_gross',
+        positionSide: pos.side,
+        avgPrice: pos.avgPrice,
+        closePrice: mark,
+        closeQty: qty,
+      })
+      const fee = estimateTradeFee(feeNotionalAbsBySpec(spec, mark, qty))
       const net = Number.isFinite(gross) ? gross - fee : -fee
       const ts = Date.now()
       const fill: TradeFillRow = {

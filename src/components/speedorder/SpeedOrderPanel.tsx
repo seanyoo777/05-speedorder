@@ -6,7 +6,7 @@ import { selectSpeedOrderShell } from '../../store/selectors'
 import { submitMockSpeedOrder, useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
 import { estimateInitialMarginUsdt } from '../../utils/margin'
-import { roundToLotSize, roundToTickSize } from '../../utils/rounding'
+import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
 import { OrderConfirmModal, type OrderConfirmDraft } from './OrderConfirmModal'
 
@@ -65,14 +65,14 @@ export function SpeedOrderPanel() {
 
   const draft = useMemo((): OrderConfirmDraft | null => {
     if (pendingSide == null) return null
-    const rawQty = roundToLotSize(Number(qty), spec.lotSize)
+    const rawQty = roundQtyBySpec(spec, Number(qty))
     const refPx =
-      effectiveOrderType === 'market' ? lastPrice : roundToTickSize(effectiveLimit, spec.tickSize)
-    const margin = estimateInitialMarginUsdt(refPx, rawQty, spec.defaultLeverage)
+      effectiveOrderType === 'market' ? lastPrice : roundPriceBySpec(spec, effectiveLimit)
+    const margin = estimateInitialMarginUsdt(spec, refPx, rawQty)
     const priceDisplay =
       effectiveOrderType === 'market'
         ? `시장 (참고 ${formatByDecimals(lastPrice, spec.priceDecimals)})`
-        : formatByDecimals(roundToTickSize(effectiveLimit, spec.tickSize), spec.priceDecimals)
+        : formatByDecimals(roundPriceBySpec(spec, effectiveLimit), spec.priceDecimals)
     return {
       symbol: spec.symbol,
       displayName: spec.displayName,
@@ -95,7 +95,7 @@ export function SpeedOrderPanel() {
 
   const runSubmit = () => {
     if (pendingSide == null) return
-    const q = roundToLotSize(Number(qty), spec.lotSize)
+    const q = roundQtyBySpec(spec, Number(qty))
     if (!Number.isFinite(q) || q <= 0) {
       setModalOpen(false)
       setPendingSide(null)
@@ -114,7 +114,7 @@ export function SpeedOrderPanel() {
 
   const requestSubmit = (side: OrderSide) => {
     if (busy) return
-    const q = roundToLotSize(Number(qty), spec.lotSize)
+    const q = roundQtyBySpec(spec, Number(qty))
     if (!Number.isFinite(q) || q <= 0) return
     if (confirmOrders) {
       setPendingSide(side)

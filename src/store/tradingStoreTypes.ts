@@ -1,4 +1,5 @@
 import type { StoreApi } from 'zustand'
+import type { OrderBookDesignPresetId } from '../config/orderBookDesignPresets'
 import type { RiskSnapshot } from '../domain/risk'
 import type {
   ConditionalOrderKind,
@@ -33,6 +34,12 @@ export type TradingStoreState = {
   orderBookDoubleClickEnabled: boolean
   /** 일반 주문 지정가 필드에 1회 주입 */
   orderBookPendingLimitPrice: number | null
+  /** 호가 행 선택 강조 (가격) */
+  orderBookHighlightPrice: number | null
+  /** 호가 디자인 프리셋 (localStorage 동기) */
+  orderBookDesignPreset: OrderBookDesignPresetId
+  /** 매수/매도 색역 수동 반전 (프리셋 위에 추가 적용) */
+  orderBookColorInvert: boolean
 }
 
 export type TradingStoreActions = {
@@ -63,6 +70,9 @@ export type TradingStoreActions = {
   setOrderBookDoubleClickEnabled: (v: boolean) => void
   setOrderBookPendingLimitPrice: (price: number | null) => void
   clearOrderBookPendingLimitPrice: () => void
+  setOrderBookHighlightPrice: (price: number | null) => void
+  setOrderBookDesignPreset: (id: OrderBookDesignPresetId) => void
+  setOrderBookColorInvert: (v: boolean) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions

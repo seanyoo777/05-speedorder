@@ -1,5 +1,7 @@
+import type { SymbolSpec } from '../types/symbol'
 import type { OrderSide, PositionRow, TradeFillRow } from '../types/trading'
 import { getSymbolSpec } from '../symbols/registry'
+import { calculateMarginBySpec, calculatePnlBySpec, feeNotionalAbsBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
 
 /** 모의 테이커 수수료 (bps) */
@@ -10,6 +12,7 @@ export function estimateTradeFee(notionalAbs: number): number {
   return (notionalAbs * MOCK_FEE_BPS) / 10_000
 }
 
+/** @deprecated 스펙 기반은 `calculateMarginBySpec` — 호환용 선형 근사 */
 export function marginNotional(avgPrice: number, size: number, leverage: number): number {
   const lev = leverage > 0 && Number.isFinite(leverage) ? leverage : 1
   const a = Number.isFinite(avgPrice) ? avgPrice : 0
@@ -47,6 +50,23 @@ export function calculateUnrealizedPnlForPosition(
 ): number {
   const base = calculateUnrealizedPnlLong(avgPrice, size, mark)
   return side === 'long' ? base : -base
+}
+
+/** 스펙 기반 미실현 (포지션 행에 사용) */
+export function calculateUnrealizedPnlForPositionWithSpec(
+  spec: SymbolSpec,
+  side: PositionRow['side'],
+  avgPrice: number,
+  size: number,
+  mark: number,
+): number {
+  return calculatePnlBySpec(spec, {
+    op: 'unrealized',
+    positionSide: side,
+    avgPrice,
+    size,
+    mark,
+  })
 }
 
 export function calculateRealizedPnlLongClose(avgPrice: number, closePrice: number, closeQty: number): number {
@@ -103,15 +123,21 @@ export function revaluePositions(
   activeLastPrice: number,
 ): PositionRow[] {
   return safeArray(positions).map((p) => {
+    const spec = getSymbolSpec(p.symbol)
     const t = tickers.find((x) => x.symbol === p.symbol)
     const tp = t?.price
     const mark =
       (Number.isFinite(tp) ? tp : undefined) ??
       (p.symbol === activeSymbol && Number.isFinite(activeLastPrice) ? activeLastPrice : undefined) ??
       (Number.isFinite(p.avgPrice) ? p.avgPrice : 0)
-    const lev = getSymbolSpec(p.symbol).defaultLeverage
-    const unreal = calculateUnrealizedPnlForPosition(p.side, p.avgPrice, p.size, mark)
-    const margin = marginNotional(p.avgPrice, p.size, lev)
+    const unreal = calculatePnlBySpec(spec, {
+      op: 'unrealized',
+      positionSide: p.side,
+      avgPrice: p.avgPrice,
+      size: p.size,
+      mark,
+    })
+    const margin = calculateMarginBySpec(spec, mark, p.size)
     const returnPct = margin > 0 ? (unreal / margin) * 100 : 0
     return { ...p, unrealizedPnl: unreal, returnPct }
   })
@@ -131,6 +157,7 @@ export function executeNetSpeedFill(input: {
   timestamp: number
 }): { positions: PositionRow[]; fill: TradeFillRow } {
   const { symbol, side, quantity, price, fillId, timestamp } = input
+  const spec = getSymbolSpec(symbol)
   const qty = Number.isFinite(quantity) && quantity > 0 ? quantity : 0
   const px = Number.isFinite(price) && price > 0 ? price : 0
   if (qty <= 0 || px <= 0) {
@@ -148,7 +175,7 @@ export function executeNetSpeedFill(input: {
     return { positions: safeArray(input.positions), fill: emptyFill }
   }
 
-  const notional = Math.abs(px * qty)
+  const notional = feeNotionalAbsBySpec(spec, px, qty)
   const feeTotal = estimateTradeFee(notional)
   const time = new Date(timestamp).toLocaleTimeString('ko-KR', { hour12: false })
 
@@ -214,11 +241,13 @@ export function executeNetSpeedFill(input: {
 
   while (orderLeft > 0 && pos.size > 0) {
     const dq = Math.min(orderLeft, pos.size)
-    if (pos.side === 'long') {
-      grossClose += calculateRealizedPnlLongClose(pos.avgPrice, px, dq)
-    } else {
-      grossClose += calculateRealizedPnlShortClose(pos.avgPrice, px, dq)
-    }
+    grossClose += calculatePnlBySpec(spec, {
+      op: 'close_gross',
+      positionSide: pos.side,
+      avgPrice: pos.avgPrice,
+      closePrice: px,
+      closeQty: dq,
+    })
     pos.size -= dq
     orderLeft -= dq
   }

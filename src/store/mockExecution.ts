@@ -9,6 +9,7 @@ export {
   calculateAveragePrice,
   calculateUnrealizedPnlLong,
   calculateUnrealizedPnlForPosition,
+  calculateUnrealizedPnlForPositionWithSpec,
   calculateRealizedPnlLongClose,
   calculateRealizedPnlShortClose,
   positionRowId,
