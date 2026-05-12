@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --color-so-bg: #0b0e11;
+  --color-so-surface: #12161c;
+  --color-so-border: #1e2329;
+  --color-so-muted: #848e9c;
+  --color-so-bid: #0ecb81;
+  --color-so-ask: #f6465d;
+  --color-so-accent: #3b82f6;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-so-bg);
+  color: #eaecef;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
