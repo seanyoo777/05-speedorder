@@ -1,9 +1,8 @@
 import { Suspense, lazy } from 'react'
 import { ErrorBoundary } from '../components/common/ErrorBoundary'
 import { TradeHistoryPanel } from '../components/history/TradeHistoryPanel'
-import { OrderBookPanel } from '../components/orderbook/OrderBookPanel'
+import { RightOrderColumn } from '../components/ordercolumn/RightOrderColumn'
 import { PositionPanel } from '../components/position/PositionPanel'
-import { SpeedOrderPanel } from '../components/speedorder/SpeedOrderPanel'
 import { TopTickerBar } from '../components/ticker/TopTickerBar'
 import { useMockRealtime } from '../hooks/useMockRealtime'
 import { TradingLayout } from '../layouts/TradingLayout'
@@ -22,16 +21,11 @@ export default function TradingPage() {
   useMockRealtime(true)
 
   const orderColumn = (
-    <>
-      <ErrorBoundary>
-        <div className="min-h-[200px] lg:flex-1">
-          <OrderBookPanel />
-        </div>
-      </ErrorBoundary>
-      <ErrorBoundary>
-        <SpeedOrderPanel />
-      </ErrorBoundary>
-    </>
+    <ErrorBoundary>
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
+        <RightOrderColumn />
+      </div>
+    </ErrorBoundary>
   )
 
   const bottomRow = (

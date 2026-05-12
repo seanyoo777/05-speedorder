@@ -4,7 +4,7 @@ export function estimateInitialMarginUsdt(
   quantity: number,
   leverage: number,
 ): number {
-  if (!Number.isFinite(price) || !Number.isFinite(quantity)) return 0
+  if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(quantity) || quantity <= 0) return 0
   const lev = Number.isFinite(leverage) && leverage > 0 ? leverage : 1
   return Math.abs(price * quantity) / lev
 }

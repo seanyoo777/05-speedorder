@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import type { OrderSide } from '../../types/trading'
 import { STANDARD_SYMBOLS, getSymbolSpec } from '../../symbols/registry'
+import { selectSpeedOrderShell } from '../../store/selectors'
 import { submitMockSpeedOrder, useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
 import { estimateInitialMarginUsdt } from '../../utils/margin'
@@ -11,14 +13,16 @@ import { OrderConfirmModal, type OrderConfirmDraft } from './OrderConfirmModal'
 const QTY_PRESETS = [0.01, 0.05, 0.1, 0.5] as const
 
 export function SpeedOrderPanel() {
-  const symbol = useTradingStore((s) => s.symbol)
-  const lastPrice = useTradingStore((s) => s.lastPrice)
-  const beginnerMode = useTradingStore((s) => s.beginnerMode)
-  const confirmOrders = useTradingStore((s) => s.confirmOrders)
-  const mockOrderInFlightId = useTradingStore((s) => s.mockOrderInFlightId)
-  const setSymbol = useTradingStore((s) => s.setSymbol)
-  const setBeginnerMode = useTradingStore((s) => s.setBeginnerMode)
-  const setConfirmOrders = useTradingStore((s) => s.setConfirmOrders)
+  const {
+    symbol,
+    lastPrice,
+    beginnerMode,
+    confirmOrders,
+    mockOrderInFlightId,
+    setSymbol,
+    setBeginnerMode,
+    setConfirmOrders,
+  } = useTradingStore(useShallow(selectSpeedOrderShell))
 
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [qty, setQty] = useState(0.05)
@@ -32,11 +36,22 @@ export function SpeedOrderPanel() {
   const prevSymRef = useRef(useTradingStore.getState().symbol)
 
   useEffect(() => {
+    return useTradingStore.subscribe((st, prev) => {
+      const p = st.orderBookPendingLimitPrice
+      const prevP = prev.orderBookPendingLimitPrice
+      if (p != null && p !== prevP && Number.isFinite(p) && p > 0) {
+        setLimitPrice(p)
+        useTradingStore.getState().clearOrderBookPendingLimitPrice()
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     prevSymRef.current = useTradingStore.getState().symbol
-    return useTradingStore.subscribe((s) => {
-      if (s.symbol !== prevSymRef.current) {
-        prevSymRef.current = s.symbol
-        setLimitPrice(s.lastPrice)
+    return useTradingStore.subscribe((st) => {
+      if (st.symbol !== prevSymRef.current) {
+        prevSymRef.current = st.symbol
+        setLimitPrice(st.lastPrice)
       }
     })
   }, [])

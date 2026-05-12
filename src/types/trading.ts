@@ -31,7 +31,12 @@ export type TradeFillRow = {
   side: OrderSide
   price: number
   quantity: number
+  /** 모의 수수료 (USDT) */
+  fee: number
+  /** 이번 체결로 반영된 실현 손익 변화 (수수료 포함 차감) */
+  realizedPnl: number
   time: string
+  timestamp: number
 }
 
 /** 모의 주문 라이프사이클 (persisted row에는 idle 미사용) */
@@ -66,3 +71,25 @@ export type TickerRow = {
 }
 
 export type HistoryTab = 'fills' | 'orders' | 'cancelled'
+
+/** MIT / 스탑로스(mock) — 트리거 시 시장가 체결 */
+export type ConditionalOrderKind = 'MIT' | 'STOP'
+
+export type ConditionalOrderStatus = 'pending' | 'triggered' | 'filled' | 'canceled'
+
+export type ConditionalOrderRow = {
+  id: string
+  symbol: string
+  kind: ConditionalOrderKind
+  side: OrderSide
+  triggerPrice: number
+  quantity: number
+  status: ConditionalOrderStatus
+  time: string
+  createdAt: number
+  triggeredAt?: number
+  filledAt?: number
+}
+
+/** 조건 체결 시 예상 분류 (UI 표시) */
+export type ConditionalOutcomeLabel = '신규진입' | '부분청산' | '완전청산' | '반전진입'

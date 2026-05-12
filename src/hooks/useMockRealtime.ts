@@ -6,11 +6,12 @@ import { useTradingStore } from '../store/tradingStore'
 export function useMockRealtime(enabled = true, intervalMs = 850): void {
   useEffect(() => {
     if (!enabled) return
+    const ms = Math.min(5000, Math.max(450, intervalMs))
     const id = window.setInterval(() => {
       const { lastPrice, tickers, symbol, applyMockTick } = useTradingStore.getState()
       const next = simulateTick(symbol, lastPrice, tickers)
       applyMockTick(next)
-    }, intervalMs)
+    }, ms)
     return () => window.clearInterval(id)
   }, [enabled, intervalMs])
 }

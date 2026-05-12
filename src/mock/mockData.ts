@@ -54,7 +54,7 @@ export const initialTickers: TickerRow[] = [
 
 export const initialPositions: PositionRow[] = [
   {
-    id: 'p1',
+    id: 'pos-BTCUSDT',
     symbol: 'BTCUSDT',
     side: 'long',
     size: 0.12,
@@ -64,7 +64,7 @@ export const initialPositions: PositionRow[] = [
     returnPct: 0.46,
   },
   {
-    id: 'p2',
+    id: 'pos-ETHUSDT',
     symbol: 'ETHUSDT',
     side: 'short',
     size: 1.5,
@@ -82,7 +82,10 @@ export const initialFills: TradeFillRow[] = [
     side: 'buy',
     price: 96_820,
     quantity: 0.05,
+    fee: 1.9364,
+    realizedPnl: -1.9364,
     time: '14:02:11',
+    timestamp: 1_700_000_000_000,
   },
   {
     id: 'f2',
@@ -90,7 +93,10 @@ export const initialFills: TradeFillRow[] = [
     side: 'sell',
     price: 97_100,
     quantity: 0.02,
+    fee: 0.7768,
+    realizedPnl: 5.2232,
     time: '14:05:44',
+    timestamp: 1_700_000_006_000,
   },
 ]
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { HistoryTab } from '../../types/trading'
-import { formatPrice, formatQty } from '../../utils/format'
+import { formatPrice, formatQty, formatSignedUsd } from '../../utils/format'
 import { safeArray } from '../../utils/safe'
 import { useTradingStore } from '../../store/tradingStore'
 import { PanelShell } from '../common/PanelShell'
@@ -76,15 +76,24 @@ export function TradeHistoryPanel() {
               filteredFills.map((f) => (
                 <li
                   key={f.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
+                  className="flex flex-col gap-1 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
                 >
-                  <span className="text-so-muted">{f.time}</span>
-                  <span className="text-white">{f.symbol}</span>
-                  <span className={f.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
-                    {f.side === 'buy' ? 'BUY' : 'SELL'}
-                  </span>
-                  <span className="text-so-muted">{formatQty(f.quantity)}</span>
-                  <span className="text-white">{formatPrice(f.price)}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-so-muted">{f.time}</span>
+                    <span className="text-white">{f.symbol}</span>
+                    <span className={f.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
+                      {f.side === 'buy' ? 'BUY' : 'SELL'}
+                    </span>
+                    <span className="text-so-muted">{formatQty(f.quantity)}</span>
+                    <span className="text-white">{formatPrice(f.price)}</span>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-x-3 text-[10px] text-so-muted">
+                    <span>수수료 {formatPrice(f.fee ?? 0)}</span>
+                    <span className={f.realizedPnl >= 0 ? 'text-so-bid' : 'text-so-ask'}>
+                      실현Δ {formatSignedUsd(f.realizedPnl ?? 0)}
+                    </span>
+                    <span className="font-mono opacity-70">{f.timestamp ?? '—'}</span>
+                  </div>
                 </li>
               ))
             )}

@@ -7,7 +7,7 @@
 
 - React 19 + Vite 8 + TypeScript
 - Tailwind CSS v4 (`@tailwindcss/vite`)
-- Zustand (`src/store/tradingStore.ts`)
+- Zustand (`src/store/tradingStore.ts` — 슬라이스 합성 + `src/store/slices/*`)
 - 에러 바운더리 + `React.lazy` / `Suspense`로 패널/페이지 단위 격리
 
 ## 폴더 구조
@@ -28,7 +28,14 @@ src/
   services/
     websocket/     WebSocketClient 스텁 + 메시지 타입
     websocketService/  위 모듈 re-export (네이밍 통일용)
-  store/           Zustand 스토어 + submitMockSpeedOrder
+  domain/          공통 타입(OrderRequest, RiskSnapshot 등) — TGX/MockInvest/OneAI 재사용
+  engine/          mockExecutionEngine, submitMockSpeedOrder 팩토리 (UI에서 직접 호출 금지 권장)
+  store/
+    boot.ts        초기 심볼·호가·포지션 부트스트랩
+    slices/        symbol+market, order, position, ui+risk 슬라이스
+    selectors.ts   useShallow용 셀렉터
+    tradingStoreTypes.ts  스토어 전체 타입(슬라이스 합성 계약)
+    mockExecution.ts      엔진으로의 re-export (레거시 경로 호환)
   hooks/           useMockRealtime (mock tick)
   mock/            mockData, mockSimulate
   types/           trading, symbol
@@ -101,17 +108,18 @@ stateDiagram-v2
 
 - 단일 스토어: `useTradingStore`
 - 도메인 필드: `symbol`, `lastPrice`, `orderBook`, `tickers`, `positions`, `fills`, `orders`
-- UI 필드: `beginnerMode`, `confirmOrders`, **`mockOrderInFlightId`** (모의 주문 1건 처리 중 UI 잠금)
+- UI 필드: `beginnerMode`, `confirmOrders`, **`mockOrderInFlightId`**, **`riskSnapshot`** (모의 사용 증거금 등 — `mergeRiskSnapshotWithPositions`로 포지션 변경 시 동기)
 - **외부 데이터 주입용 액션** (WebSocket / 호스트 앱이 호출):
   - `applyOrderBook`, `applyLastPrice`, `applyTickers`, `patchTicker`
   - `setPositions`, `pushFill`, `upsertOrder`, `cancelOrder`, `setSymbol`
+  - `setRiskSnapshot` — 호스트가 가용 잔고·한도를 주입 (WS/REST)
 - **mock 전용**: `applyMockTick` — `useMockRealtime`이 `simulateTick(activeSymbol, …)` 후 호출해 호가·티커·미실현 손익 갱신
 
-구체적인 상태 전이·타입 설명은 위 **「주문 상태 흐름 (mock)」** 절을 참고하세요. 구현: `submitMockSpeedOrder` (`store/tradingStore.ts`) — **실거래·실 API 호출 없음.**
+구체적인 상태 전이·타입 설명은 위 **「주문 상태 흐름 (mock)」** 절을 참고하세요. 구현: **`createSubmitMockSpeedOrder`** (`engine/submitMockSpeedOrder.ts`)가 스토어 `StoreApi`에 바인딩되고, 앱에서는 **`submitMockSpeedOrder`** (`store/tradingStore.ts` re-export)로 호출 — **실거래·실 API 호출 없음.**
 
 ## mock 실시간 갱신
 
-- `hooks/useMockRealtime.ts` → `simulateTick(store.symbol, lastPrice, tickers)` — 활성 심볼 호가만 해당 `SymbolSpec`으로 재생성, 동명 티커 가격은 `lastPrice`와 동기.
+- `hooks/useMockRealtime.ts` → `simulateTick(store.symbol, lastPrice, tickers)` — 활성 심볼 호가만 해당 `SymbolSpec`으로 재생성, 동명 티커 가격은 `lastPrice`와 동기. 인터벌은 **450ms ~ 5000ms**로 클램프되어 과도한 틱을 방지합니다.
 - 프로덕션에서는 이 훅을 제거하고, 동일한 스토어 액션을 **WebSocket 핸들러**에서 호출하면 됩니다.
 
 ## WebSocket 연결 포인트
@@ -158,13 +166,13 @@ client.connect()
 1. **번들**: `05-SpeedOrder`를 workspace 패키지로 두고 TGX 앱에서 `TradingPage`(또는 개별 패널) import.  
 2. **심볼 라우트**: TGX 라우트 파라미터(`:pair`) 변경 시 `useTradingStore.getState().setSymbol(normalized)` 호출 — 호가·티커·차트 슬롯·포지션 필터가 자동 동기됩니다.  
 3. **시세·호가 WS**: 수신 시 `applyTickers` / `applyOrderBook` / `applyLastPrice`를 호출. `applyMockTick`은 제거하거나 플래그로 비활성화.  
-4. **주문 REST/WS**: `submitMockSpeedOrder` 대신 거래소 주문 API 호출 → 응답·체결 푸시에 맞춰 `upsertOrder`(상태 전이) 및 `pushFill`을 동일 스키마로 반영.  
+4. **주문 REST/WS**: `submitMockSpeedOrder`(또는 `createSubmitMockSpeedOrder(커스텀Store)`) 대신 거래소 주문 API 호출 → 응답·체결 푸시에 맞춰 `upsertOrder`(상태 전이) 및 `pushFill`을 동일 스키마로 반영.  
 5. **차트**: `ChartArea` 내부에 TradingView `widget`을 마운트하고 `data-chart-symbol` 또는 `useTradingStore(s => s.symbol)` 구독으로 `setSymbol`/`chart.setSymbol`을 연결.
 
 ### MockInvest (모의투자) 연동 절차
 
 1. TGX와 동일하게 **스토어 주입**만 맞추면 UI는 재사용됩니다.  
-2. **주문**: `submitMockSpeedOrder`를 MockInvest 백엔드의 **모의 주문 API**로 바꾸되, 응답으로 `submitting → accepted → filled`(또는 `rejected`)를 `upsertOrder`에 재현합니다.  
+2. **주문**: `submitMockSpeedOrder`를 MockInvest 백엔드의 **모의 주문 API**로 바꾸되, 응답으로 `submitting → accepted → filled`(또는 `rejected`)를 `upsertOrder`에 재현합니다. 동일 스토어에 `createSubmitMockSpeedOrder`를 바인딩하면 호스트 전용 Zustand와도 연결 가능합니다.  
 3. **포지션/손익**: 서버가 계산한 `positions`를 `setPositions`로 밀어 넣으면 `PositionPanel`은 이미 `symbol` 필터만 적용합니다.  
 4. **실거래 금지 모드**: MockInvest 빌드에서는 주문 클라이언트를 모의 엔드포인트에만 바인딩하고, `WebSocketClient`의 URL을 스테이징으로 제한합니다.
 
@@ -185,9 +193,44 @@ client.connect()
 
 실거래 연결 시에도 **스토어 액션 경계**를 유지하면 UI 컴포넌트 수정을 최소화할 수 있습니다.
 
+## 2026 엔진 계층·스토어 모듈화
+
+### 엔진 계층 (`src/engine/`)
+
+| 모듈 | 역할 |
+|------|------|
+| **`mockExecutionEngine.ts`** | 순수 함수: 평단·미실현·실현(청산)·부분청산·반전·`revaluePositions`, **`executeNetSpeedFill`** / **`applyFillToPosition`**. NaN·0 이하 가격/수량은 조기 반환. |
+| **`submitMockSpeedOrder.ts`** | `StoreApi<TradingStore>`를 받아 **`createSubmitMockSpeedOrder`**로 UI와 분리된 mock 제출 파이프라인(지연 → 체결 → `mergeRiskSnapshotWithPositions`). |
+
+UI 컴포넌트는 **`submitMockSpeedOrder`만** 호출하고, 엔진 파일을 직접 import하지 않는 것을 권장합니다(테스트·호스트 어댑터는 엔진 직접 import 가능).
+
+### Zustand 슬라이스 (`src/store/slices/`)
+
+| 슬라이스 | 상태·액션 |
+|----------|-----------|
+| **symbolMarket** | `symbol`, `lastPrice`, `orderBook`, `tickers`, `setSymbol`, `apply*`, `applyMockTick` — 포지션 재평가 시 `riskSnapshot` 동기 |
+| **order** | `orders`, `fills`, `mockOrderInFlightId`, `pushFill`, `upsertOrder`, `cancelOrder`, `setMockOrderInFlight` |
+| **position** | `positions`, `setPositions`, `closePositionDemo` |
+| **uiRisk** | `beginnerMode`, `confirmOrders`, `riskSnapshot`, `setRiskSnapshot` 등 |
+
+`tradingStoreTypes.ts`에 전체 `TradingStore` 타입을 한곳에 두어 슬라이스가 동일 계약을 공유합니다.
+
+### 조건·복합 주문 확장 계획
+
+- **타입**: `src/domain/order.ts`의 `ConditionalOrderType` (`STOP`, `STOP_LIMIT`, `MIT`, `OCO`, `TP_SL` 등) 및 `OrderMode` (`standard` \| `speed` \| `hts` \| `conditional`).
+- **실행**: 현재는 스피드 패널의 `market` / `limit`만 mock 체결. 향후 각 모드별 패널이 동일 스토어 액션을 호출하고, 엔진에 **조건부 트리거 큐**(가격 크로스 시 `executeNetSpeedFill` 호출)를 추가하는 형태로 확장합니다.
+- **UX 슬롯**: 일반 / 스피드 / HTS / 조건 / 원클릭 청산 / 포지션 기반 CTA / 모바일 브레이크포인트는 레이아웃·패널 조합으로 수용 가능하도록 패널 단위 분리를 유지합니다.
+
+### TGX-CEX / MockInvest / OneAI (엔진 관점 요약)
+
+- **TGX-CEX**: 실시간은 WS → `applyMockTick` 대신 세분화된 액션 호출. 주문은 REST/WS 응답을 `upsertOrder`/`pushFill`로 매핑하거나, 로컬 체결 시뮬이 필요하면 **`executeNetSpeedFill`**만 호출해 포지션 일관성을 맞춥니다.
+- **MockInvest**: 서버 권위 포지션이면 `setPositions` + `setRiskSnapshot`으로 밀고, 로컬 mock이면 현재 엔진 경로 유지.
+- **OneAI**: 에이전트 출력 → `setSymbol` / `setRiskSnapshot` / 커스텀 `createSubmitMockSpeedOrder(aiAwareStore)`로 정책 레이어를 끼웁니다.
+
 ## 오류·성능 관련 결정
 
-- 배열/숫자: `utils/safe.ts`, 스토어 `safeArray`로 **undefined 방지**
+- 배열/숫자: `utils/safe.ts`, 스토어 `safeArray`로 **undefined 방지**; 호가 패널은 **빈 오더북** 시 안내 문구; `safeNumber`로 표시가 NaN일 때 레퍼런스가로 대체
+- 셀렉터: `store/selectors.ts` + `useShallow`로 다중 필드 구독 시 **리렌더 감소** (예: `SpeedOrderPanel`)
 - 패널마다 `ErrorBoundary` → 한 패널이 터져도 나머지 레이아웃 유지
 - 차트 슬롯은 `lazy` + `Suspense`로 **코드 분할** 가능한 형태 유지
 
