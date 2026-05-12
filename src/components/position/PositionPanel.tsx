@@ -4,12 +4,13 @@ import { useTradingStore } from '../../store/tradingStore'
 import { PanelShell } from '../common/PanelShell'
 
 export function PositionPanel() {
+  const symbol = useTradingStore((s) => s.symbol)
   const positions = useTradingStore((s) => s.positions)
   const closePositionDemo = useTradingStore((s) => s.closePositionDemo)
-  const rows = safeArray(positions)
+  const rows = safeArray(positions).filter((p) => p.symbol === symbol)
 
   return (
-    <PanelShell title="포지션">
+    <PanelShell title={`포지션 · ${symbol}`}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-left text-[11px]">
           <thead className="sticky top-0 bg-so-surface text-so-muted">
@@ -28,7 +29,7 @@ export function PositionPanel() {
             {rows.length === 0 ? (
               <tr>
                 <td className="px-2 py-6 text-center text-so-muted" colSpan={8}>
-                  열린 포지션이 없습니다.
+                  <span className="font-mono text-white">{symbol}</span>에 대한 열린 포지션이 없습니다.
                 </td>
               </tr>
             ) : (

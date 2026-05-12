@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { placeSpeedOrderDemo, useTradingStore } from '../../store/tradingStore'
-import { formatPrice } from '../../utils/format'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { OrderSide } from '../../types/trading'
+import { STANDARD_SYMBOLS, getSymbolSpec } from '../../symbols/registry'
+import { submitMockSpeedOrder, useTradingStore } from '../../store/tradingStore'
+import { formatByDecimals } from '../../utils/format'
+import { estimateInitialMarginUsdt } from '../../utils/margin'
+import { roundToLotSize, roundToTickSize } from '../../utils/rounding'
 import { PanelShell } from '../common/PanelShell'
+import { OrderConfirmModal, type OrderConfirmDraft } from './OrderConfirmModal'
 
 const QTY_PRESETS = [0.01, 0.05, 0.1, 0.5] as const
 
@@ -10,44 +15,108 @@ export function SpeedOrderPanel() {
   const lastPrice = useTradingStore((s) => s.lastPrice)
   const beginnerMode = useTradingStore((s) => s.beginnerMode)
   const confirmOrders = useTradingStore((s) => s.confirmOrders)
+  const mockOrderInFlightId = useTradingStore((s) => s.mockOrderInFlightId)
+  const setSymbol = useTradingStore((s) => s.setSymbol)
   const setBeginnerMode = useTradingStore((s) => s.setBeginnerMode)
   const setConfirmOrders = useTradingStore((s) => s.setConfirmOrders)
 
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market')
   const [qty, setQty] = useState(0.05)
   const [limitPrice, setLimitPrice] = useState(lastPrice)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [pendingSide, setPendingSide] = useState<OrderSide | null>(null)
+
+  const spec = getSymbolSpec(symbol)
+  const busy = mockOrderInFlightId != null
+
+  const prevSymRef = useRef(useTradingStore.getState().symbol)
 
   useEffect(() => {
-    setLimitPrice(lastPrice)
-  }, [lastPrice])
+    prevSymRef.current = useTradingStore.getState().symbol
+    return useTradingStore.subscribe((s) => {
+      if (s.symbol !== prevSymRef.current) {
+        prevSymRef.current = s.symbol
+        setLimitPrice(s.lastPrice)
+      }
+    })
+  }, [])
 
   const effectiveLimit = useMemo(() => {
     const p = Number(limitPrice)
     return Number.isFinite(p) && p > 0 ? p : lastPrice
   }, [limitPrice, lastPrice])
 
-  const submit = (side: 'buy' | 'sell', label: string) => {
-    const type = beginnerMode ? 'market' : orderType
-    const go = () =>
-      placeSpeedOrderDemo({
-        side,
-        orderType: type,
-        quantity: qty,
-        limitPrice: type === 'limit' ? effectiveLimit : undefined,
-      })
+  const effectiveOrderType = beginnerMode ? 'market' : orderType
 
-    if (confirmOrders) {
-      const ok = window.confirm(
-        `${label} · ${type === 'market' ? '시장가' : '지정가'} · 수량 ${qty} ${symbol} (모의)`,
-      )
-      if (!ok) return
+  const draft = useMemo((): OrderConfirmDraft | null => {
+    if (pendingSide == null) return null
+    const rawQty = roundToLotSize(Number(qty), spec.lotSize)
+    const refPx =
+      effectiveOrderType === 'market' ? lastPrice : roundToTickSize(effectiveLimit, spec.tickSize)
+    const margin = estimateInitialMarginUsdt(refPx, rawQty, spec.defaultLeverage)
+    const priceDisplay =
+      effectiveOrderType === 'market'
+        ? `시장 (참고 ${formatByDecimals(lastPrice, spec.priceDecimals)})`
+        : formatByDecimals(roundToTickSize(effectiveLimit, spec.tickSize), spec.priceDecimals)
+    return {
+      symbol: spec.symbol,
+      displayName: spec.displayName,
+      marketType: spec.marketType,
+      directionLabel: pendingSide === 'buy' ? '롱 (매수)' : '숏 (매도)',
+      orderType: effectiveOrderType,
+      priceDisplay,
+      quantity: rawQty,
+      qtyDecimals: spec.qtyDecimals,
+      estimatedMargin: margin,
     }
-    go()
+  }, [
+    pendingSide,
+    qty,
+    spec,
+    effectiveOrderType,
+    lastPrice,
+    effectiveLimit,
+  ])
+
+  const runSubmit = () => {
+    if (pendingSide == null) return
+    const q = roundToLotSize(Number(qty), spec.lotSize)
+    if (!Number.isFinite(q) || q <= 0) {
+      setModalOpen(false)
+      setPendingSide(null)
+      return
+    }
+    void submitMockSpeedOrder({
+      side: pendingSide,
+      orderType: effectiveOrderType,
+      quantity: qty,
+      limitPrice: effectiveOrderType === 'limit' ? effectiveLimit : undefined,
+    }).finally(() => {
+      setModalOpen(false)
+      setPendingSide(null)
+    })
+  }
+
+  const requestSubmit = (side: OrderSide) => {
+    if (busy) return
+    const q = roundToLotSize(Number(qty), spec.lotSize)
+    if (!Number.isFinite(q) || q <= 0) return
+    if (confirmOrders) {
+      setPendingSide(side)
+      setModalOpen(true)
+      return
+    }
+    void submitMockSpeedOrder({
+      side,
+      orderType: effectiveOrderType,
+      quantity: qty,
+      limitPrice: effectiveOrderType === 'limit' ? effectiveLimit : undefined,
+    })
   }
 
   return (
     <PanelShell
-      title="원클릭 주문"
+      title={`원클릭 주문 · ${symbol}`}
       action={
         <label className="flex items-center gap-1 text-[10px] text-so-muted">
           <input
@@ -59,8 +128,17 @@ export function SpeedOrderPanel() {
         </label>
       }
     >
+      <OrderConfirmModal
+        open={modalOpen}
+        draft={draft}
+        onClose={() => {
+          setModalOpen(false)
+          setPendingSide(null)
+        }}
+        onConfirm={runSubmit}
+      />
       <div className="space-y-3 p-3 text-xs">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex rounded-md border border-so-border p-0.5">
             <button
               type="button"
@@ -77,13 +155,29 @@ export function SpeedOrderPanel() {
               초보자
             </button>
           </div>
-          <span className="font-mono text-[11px] text-so-muted">{symbol}</span>
+          <select
+            className="max-w-[140px] rounded-md border border-so-border bg-so-bg px-2 py-1 font-mono text-[11px] text-white"
+            value={symbol}
+            disabled={busy}
+            onChange={(e) => {
+              const v = e.target.value
+              setSymbol(v)
+              setLimitPrice(useTradingStore.getState().lastPrice)
+            }}
+          >
+            {STANDARD_SYMBOLS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </div>
 
         {!beginnerMode ? (
           <div className="flex gap-2">
             <button
               type="button"
+              disabled={busy}
               className={`flex-1 rounded-md border py-1.5 ${
                 orderType === 'market' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'
               }`}
@@ -93,6 +187,7 @@ export function SpeedOrderPanel() {
             </button>
             <button
               type="button"
+              disabled={busy}
               className={`flex-1 rounded-md border py-1.5 ${
                 orderType === 'limit' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'
               }`}
@@ -113,6 +208,7 @@ export function SpeedOrderPanel() {
             <input
               className="mt-1 w-full rounded-md border border-so-border bg-so-bg px-2 py-1.5 font-mono text-white"
               type="number"
+              disabled={busy}
               value={limitPrice}
               onChange={(e) => setLimitPrice(Number(e.target.value))}
             />
@@ -125,6 +221,7 @@ export function SpeedOrderPanel() {
               <button
                 key={q}
                 type="button"
+                disabled={busy}
                 className={`rounded border px-2 py-1 font-mono ${
                   qty === q ? 'border-so-accent text-so-accent' : 'border-so-border text-so-muted'
                 }`}
@@ -137,26 +234,30 @@ export function SpeedOrderPanel() {
         )}
 
         <label className="block text-so-muted">
-          수량
+          수량 (lot {spec.lotSize})
           <input
             className="mt-1 w-full rounded-md border border-so-border bg-so-bg px-2 py-1.5 font-mono text-white"
             type="number"
-            step="0.001"
+            step={spec.lotSize}
             min={0}
+            disabled={busy}
             value={qty}
             onChange={(e) => setQty(Number(e.target.value))}
           />
         </label>
 
         <div className="text-[11px] text-so-muted">
-          참고가 <span className="font-mono text-white">{formatPrice(lastPrice)}</span>
+          참고가{' '}
+          <span className="font-mono text-white">{formatByDecimals(lastPrice, spec.priceDecimals)}</span>
+          {busy ? <span className="ml-2 text-so-accent">주문 처리 중…</span> : null}
         </div>
 
         {beginnerMode ? (
           <button
             type="button"
-            className="w-full rounded-md border border-so-border py-2 text-sm font-medium"
-            onClick={() => submit('buy', '매수(모의)')}
+            disabled={busy}
+            className="w-full rounded-md border border-so-border py-2 text-sm font-medium disabled:opacity-50"
+            onClick={() => requestSubmit('buy')}
           >
             빠른 매수 (시장가)
           </button>
@@ -164,15 +265,17 @@ export function SpeedOrderPanel() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              className="rounded-md bg-so-bid py-2.5 text-sm font-semibold text-so-bg"
-              onClick={() => submit('buy', '롱(매수)')}
+              disabled={busy}
+              className="rounded-md bg-so-bid py-2.5 text-sm font-semibold text-so-bg disabled:opacity-50"
+              onClick={() => requestSubmit('buy')}
             >
               롱
             </button>
             <button
               type="button"
-              className="rounded-md bg-so-ask py-2.5 text-sm font-semibold text-white"
-              onClick={() => submit('sell', '숏(매도)')}
+              disabled={busy}
+              className="rounded-md bg-so-ask py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              onClick={() => requestSubmit('sell')}
             >
               숏
             </button>

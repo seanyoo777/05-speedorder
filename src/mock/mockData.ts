@@ -1,3 +1,4 @@
+import type { SymbolSpec } from '../types/symbol'
 import type {
   OrderBookSnapshot,
   OrderLevel,
@@ -6,8 +7,7 @@ import type {
   TickerRow,
   TradeFillRow,
 } from '../types/trading'
-
-const BASE_PRICE = 97_250
+import { getSymbolSpec } from '../symbols/registry'
 
 function makeLevels(center: number, step: number, count: number, side: 'bid' | 'ask'): OrderLevel[] {
   const out: OrderLevel[] = []
@@ -20,19 +20,36 @@ function makeLevels(center: number, step: number, count: number, side: 'bid' | '
   return out
 }
 
-export function buildOrderBook(lastPrice: number): OrderBookSnapshot {
-  const step = lastPrice > 10_000 ? 25 : 0.05
+export function buildOrderBook(lastPrice: number, spec: SymbolSpec): OrderBookSnapshot {
+  const base = Math.max(spec.tickSize, Math.abs(lastPrice) * 0.00002)
+  const step = Math.round(base / spec.tickSize) * spec.tickSize || spec.tickSize
   return {
     bids: makeLevels(lastPrice, step, 14, 'bid'),
     asks: makeLevels(lastPrice, step, 14, 'ask'),
   }
 }
 
+function mkTicker(id: string, label: string, symbol: string, price: number, changePct: number): TickerRow {
+  const spec = getSymbolSpec(symbol)
+  return {
+    id,
+    label,
+    symbol: spec.symbol,
+    marketType: spec.marketType,
+    price,
+    changePct,
+  }
+}
+
 export const initialTickers: TickerRow[] = [
-  { id: 'btc', label: 'BTC', symbol: 'BTCUSDT', price: BASE_PRICE, changePct: 0.42 },
-  { id: 'eth', label: 'ETH', symbol: 'ETHUSDT', price: 3_542.1, changePct: -0.18 },
-  { id: 'ndx', label: 'NASDAQ', symbol: 'NDX', price: 19_820.5, changePct: 0.09 },
-  { id: 'gold', label: 'GOLD', symbol: 'XAUUSD', price: 2_345.6, changePct: 0.31 },
+  mkTicker('btc', 'BTC', 'BTCUSDT', getSymbolSpec('BTCUSDT').referencePrice, 0.42),
+  mkTicker('eth', 'ETH', 'ETHUSDT', getSymbolSpec('ETHUSDT').referencePrice, -0.18),
+  mkTicker('sol', 'SOL', 'SOLUSDT', getSymbolSpec('SOLUSDT').referencePrice, 0.11),
+  mkTicker('xrp', 'XRP', 'XRPUSDT', getSymbolSpec('XRPUSDT').referencePrice, 0.05),
+  mkTicker('doge', 'DOGE', 'DOGEUSDT', getSymbolSpec('DOGEUSDT').referencePrice, -0.12),
+  mkTicker('bnb', 'BNB', 'BNBUSDT', getSymbolSpec('BNBUSDT').referencePrice, 0.08),
+  mkTicker('ndx', 'NDX', 'NASDAQ', getSymbolSpec('NASDAQ').referencePrice, 0.09),
+  mkTicker('gold', 'GOLD', 'GOLD', getSymbolSpec('GOLD').referencePrice, 0.31),
 ]
 
 export const initialPositions: PositionRow[] = [
@@ -85,7 +102,7 @@ export const initialOrders: OrderRecordRow[] = [
     type: 'limit',
     price: 96_500,
     quantity: 0.1,
-    status: 'open',
+    status: 'accepted',
     time: '13:58:02',
   },
   {
@@ -105,13 +122,23 @@ export const initialOrders: OrderRecordRow[] = [
     type: 'limit',
     price: 98_000,
     quantity: 0.04,
-    status: 'cancelled',
+    status: 'canceled',
     time: '12:40:19',
+  },
+  {
+    id: 'o4',
+    symbol: 'SOLUSDT',
+    side: 'buy',
+    type: 'limit',
+    price: 160,
+    quantity: 2,
+    status: 'rejected',
+    time: '11:02:00',
   },
 ]
 
 export const MOCK_SYMBOL = 'BTCUSDT'
 
 export function getInitialLastPrice(): number {
-  return BASE_PRICE
+  return getSymbolSpec(MOCK_SYMBOL).referencePrice
 }

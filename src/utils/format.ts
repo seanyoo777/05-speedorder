@@ -14,6 +14,14 @@ export function formatQty(n: number, digits = 4): string {
   })
 }
 
+export function formatByDecimals(n: number, decimals: number): string {
+  if (!Number.isFinite(n)) return '—'
+  return n.toLocaleString('en-US', {
+    minimumFractionDigits: Math.min(2, decimals),
+    maximumFractionDigits: decimals,
+  })
+}
+
 export function formatPct(n: number): string {
   if (!Number.isFinite(n)) return '—'
   const sign = n > 0 ? '+' : ''

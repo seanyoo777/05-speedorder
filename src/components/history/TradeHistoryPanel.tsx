@@ -31,8 +31,13 @@ export function TradeHistoryPanel() {
     return base.filter((f) => f.symbol.toUpperCase().includes(q))
   }, [fills, filter])
 
-  const cancelledRows = useMemo(
-    () => filteredOrders.filter((o) => o.status === 'cancelled'),
+  const canceledRows = useMemo(
+    () => filteredOrders.filter((o) => o.status === 'canceled'),
+    [filteredOrders],
+  )
+
+  const activeOrderRows = useMemo(
+    () => filteredOrders.filter((o) => o.status !== 'canceled'),
     [filteredOrders],
   )
 
@@ -88,38 +93,10 @@ export function TradeHistoryPanel() {
 
         {tab === 'orders' ? (
           <ul className="space-y-1 font-mono">
-            {filteredOrders.filter((o) => o.status !== 'cancelled').length === 0 ? (
+            {activeOrderRows.length === 0 ? (
               <li className="py-6 text-center text-so-muted">내역 없음</li>
             ) : (
-              filteredOrders
-                .filter((o) => o.status !== 'cancelled')
-                .map((o) => (
-                  <li
-                    key={o.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
-                  >
-                    <span className="text-so-muted">{o.time}</span>
-                    <span className="text-white">{o.symbol}</span>
-                    <span className="text-so-muted">{o.type === 'market' ? 'MKT' : 'LMT'}</span>
-                    <span className={o.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
-                      {o.side.toUpperCase()}
-                    </span>
-                    <span className="text-so-muted">{o.price != null ? formatPrice(o.price) : '—'}</span>
-                    <span className="rounded bg-so-border px-1 text-[10px] uppercase text-so-muted">
-                      {o.status}
-                    </span>
-                  </li>
-                ))
-            )}
-          </ul>
-        ) : null}
-
-        {tab === 'cancelled' ? (
-          <ul className="space-y-1 font-mono">
-            {cancelledRows.length === 0 ? (
-              <li className="py-6 text-center text-so-muted">내역 없음</li>
-            ) : (
-              cancelledRows.map((o) => (
+              activeOrderRows.map((o) => (
                 <li
                   key={o.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
@@ -131,7 +108,33 @@ export function TradeHistoryPanel() {
                     {o.side.toUpperCase()}
                   </span>
                   <span className="text-so-muted">{o.price != null ? formatPrice(o.price) : '—'}</span>
-                  <span className="text-so-ask">CANCELLED</span>
+                  <span className="rounded bg-so-border px-1 text-[10px] uppercase text-so-muted">
+                    {o.status}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+
+        {tab === 'cancelled' ? (
+          <ul className="space-y-1 font-mono">
+            {canceledRows.length === 0 ? (
+              <li className="py-6 text-center text-so-muted">내역 없음</li>
+            ) : (
+              canceledRows.map((o) => (
+                <li
+                  key={o.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-so-border/60 bg-so-bg/40 px-2 py-1.5"
+                >
+                  <span className="text-so-muted">{o.time}</span>
+                  <span className="text-white">{o.symbol}</span>
+                  <span className="text-so-muted">{o.type === 'market' ? 'MKT' : 'LMT'}</span>
+                  <span className={o.side === 'buy' ? 'text-so-bid' : 'text-so-ask'}>
+                    {o.side.toUpperCase()}
+                  </span>
+                  <span className="text-so-muted">{o.price != null ? formatPrice(o.price) : '—'}</span>
+                  <span className="text-so-ask">CANCELED</span>
                 </li>
               ))
             )}

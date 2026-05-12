@@ -1,0 +1,181 @@
+================================================================================
+  05-SpeedOrder  작업 보고서 (메모장용 단일 파일)
+================================================================================
+  프로젝트 경로: 05-SpeedOrder
+  보고서 성격: 누적 구현 요약 + 최근 심볼/모달/상태/UI 동기 반영
+  인코딩: UTF-8 (메모장에서 "모든 파일"로 열기 권장)
+================================================================================
+
+
+[1] 개요
+--------------------------------------------------------------------------------
+  - 공통 거래창 UI 엔진 (한국 HTS 속도감 + 단순 UI + 선물형 패널 목표).
+  - React 19 + Vite + TypeScript + Tailwind v4 + Zustand.
+  - 데이터는 mock 전용. 실거래·실계좌 API 연결 없음.
+  - 상세 기술 문서: 프로젝트 루트의 ARCHITECTURE.md 참고.
+
+
+[2] 목표 및 준수 사항
+--------------------------------------------------------------------------------
+  [목표]
+    - 공통 컴포넌트 구조, 재사용 가능, 다크 기본, 반응형.
+    - 오류 시 패널 단위 ErrorBoundary로 앱 전체 다운 방지.
+    - 이후 WebSocket / 호스트 앱(TGX, MockInvest, OneAI)에서 스토어 액션으로 주입 가능.
+
+  [준수]
+    - 기존 컴포넌트 삭제 없이 확장.
+    - npm run build, npm run lint 통과 유지.
+
+
+[3] 핵심 화면·기능 목록
+--------------------------------------------------------------------------------
+  TopTickerBar      상단 티커. 클릭 시 setSymbol. 선택 심볼 맨 앞 정렬·비선택 흐림.
+  ChartArea         차트 슬롯. symbol/lastPrice/marketType 표시, data-chart-symbol, key=symbol.
+  OrderBookPanel    호가. 심볼·스펙 기준 포맷, key=symbol으로 전환 시 리셋.
+  SpeedOrderPanel   원클릭 주문·심볼 셀렉트·초보자/전문가·확인 ON/OFF.
+  OrderConfirmModal 확인 ON일 때만 표시. 내용 확인 후 submitMockSpeedOrder.
+  PositionPanel     현재 symbol 포지션만 필터 표시.
+  TradeHistoryPanel 체결/주문/취소 탭 + 수동 심볼 필터.
+  TradingLayout     PC 2열 / 모바일 스택 레이아웃.
+
+
+[4] 심볼 시스템 (표준화)
+--------------------------------------------------------------------------------
+  [등록 심볼]
+    BTCUSDT, ETHUSDT, SOLUSDT, NASDAQ, GOLD
+
+  [파일]
+    src/types/symbol.ts     SymbolSpec, MarketType 정의
+    src/symbols/registry.ts SYMBOL_REGISTRY, getSymbolSpec, STANDARD_SYMBOLS
+
+  [SymbolSpec 필드]
+    symbol, displayName
+    marketType: crypto | futures | index | commodity
+    tickSize, lotSize, priceDecimals, qtyDecimals
+    defaultLeverage, referencePrice
+
+  [동작 요약]
+    - getSymbolSpec: 등록되지 않은 문자열은 BTC 메타 복제 fallback.
+    - buildOrderBook(lastPrice, spec): 호가 간격에 tickSize 반영.
+    - roundToTickSize / roundToLotSize: 주문 가격·수량 정렬 (utils/rounding.ts).
+    - estimateInitialMarginUsdt: 모의 예상 증거금 (utils/margin.ts).
+
+
+[5] 심볼 변경 시 UI 동기 (setSymbol)
+--------------------------------------------------------------------------------
+  호출 경로 예: 티커 행 클릭, 주문창 드롭다운 변경.
+
+  [스토어]
+    symbol 갱신
+    해당 티커 행의 price -> lastPrice (없으면 referencePrice)
+    orderBook = buildOrderBook(lastPrice, spec)
+
+  [화면별]
+    호가     orderBook + 제목 "호가 · SYMBOL" + 내부 key=symbol
+    티커     선택 심볼을 리스트 맨 앞으로, 비선택 opacity 약화
+    차트     제목/본문/data-chart-symbol + key=symbol (외부 차트 바인딩 용)
+    포지션   positions 중 symbol 일치 행만 표시
+    주문     submitMockSpeedOrder는 항상 현재 store.symbol 사용
+
+  [거래 내역]
+    자동 심볼 필터는 적용하지 않음(수동 필터로 전체 조회 유지). ARCHITECTURE.md에 명시.
+
+
+[6] 주문 확인 모달
+--------------------------------------------------------------------------------
+  [파일] src/components/speedorder/OrderConfirmModal.tsx
+
+  [표시 조건]
+    confirmOrders === true 이고 롱/숏 또는 초보자 빠른 매수 클릭 시.
+
+  [표시 항목]
+    심볼, marketType, 방향(롱/숏), 시장가/지정가, 가격(시장가는 참고가 문구),
+    수량, 예상 증거금(모의).
+
+  [확인 클릭]
+    submitMockSpeedOrder 실행 (demo 주문 파이프라인).
+
+  [확인 OFF]
+    모달 없이 즉시 submitMockSpeedOrder 동일 파이프라인.
+
+
+[7] 주문 상태 구조 (mock 전용)
+--------------------------------------------------------------------------------
+  [타입] src/types/trading.ts
+    MockOrderStatus: idle | submitting | accepted | filled | canceled | rejected
+    주문 행(PersistedMockOrderStatus): idle 제외
+
+  [성공 제출 시뮬레이션]
+    submitting -> (짧은 지연) -> accepted -> (짧은 지연) -> filled + pushFill
+
+  [기타]
+    canceled: cancelOrder 또는 목업 데이터
+    rejected: 목업 행 예시. 제출 파이프라인 기본은 성공 체결만 시뮬레이션.
+
+  [구현] store/tradingStore.ts 의 submitMockSpeedOrder
+    실거래·실 API 호출 없음.
+
+
+[8] Zustand 스토어 요약
+--------------------------------------------------------------------------------
+  [주요 state]
+    symbol, lastPrice, orderBook, tickers, positions, fills, orders
+    beginnerMode, confirmOrders, mockOrderInFlightId
+
+  [호스트/WS가 호출할 액션 예]
+    setSymbol, applyOrderBook, applyLastPrice, applyTickers, patchTicker
+    setPositions, pushFill, upsertOrder, cancelOrder
+
+  [mock 전용]
+    applyMockTick + hooks/useMockRealtime (simulateTick)
+
+
+[9] TGX-CEX / MockInvest / OneAI 연결 (요약)
+--------------------------------------------------------------------------------
+  공통: useTradingStore 필드를 단일 소스로 유지. mock은 개발용으로 유지하고
+        통합 단계에서만 useMockRealtime / submitMockSpeedOrder 교체.
+
+  TGX-CEX:
+    라우트 :pair 변경 시 setSymbol(normalized)
+    WS로 applyTickers / applyOrderBook / applyLastPrice
+    주문은 거래소 API 후 upsertOrder / pushFill로 동일 스키마 반영
+    ChartArea에 TradingView 등 마운트 후 symbol 구독으로 차트 심볼 동기
+
+  MockInvest:
+    동일 UI + 모의 주문 API로 submitMockSpeedOrder 대체
+    positions는 setPositions로 서버 계산값 주입
+
+  OneAI:
+    추천 심볼 -> setSymbol + 호스트 토스트
+    자동주문은 어댑터 함수로 정책/모달 분리
+
+  (상세 단계는 ARCHITECTURE.md "02-TGX-CEX / 04-MockInvest / OneAI" 절 참고)
+
+
+[10] 검증
+--------------------------------------------------------------------------------
+  npm run build   통과
+  npm run lint    통과
+
+
+[11] 주요 파일 경로 (참고)
+--------------------------------------------------------------------------------
+  src/store/tradingStore.ts
+  src/symbols/registry.ts
+  src/types/trading.ts
+  src/types/symbol.ts
+  src/components/speedorder/SpeedOrderPanel.tsx
+  src/components/speedorder/OrderConfirmModal.tsx
+  src/components/orderbook/OrderBookPanel.tsx
+  src/components/chart/ChartArea.tsx
+  src/components/ticker/TopTickerBar.tsx
+  src/components/position/PositionPanel.tsx
+  src/hooks/useMockRealtime.ts
+  src/mock/mockData.ts
+  src/mock/mockSimulate.ts
+  ARCHITECTURE.md
+
+
+================================================================================
+  끝.
+================================================================================

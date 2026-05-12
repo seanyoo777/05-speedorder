@@ -7,7 +7,9 @@ import type {
   TickerRow,
   TradeFillRow,
 } from '../types/trading'
+import { getSymbolSpec } from '../symbols/registry'
 import { safeArray } from '../utils/safe'
+import { roundToLotSize, roundToTickSize } from '../utils/rounding'
 import {
   buildOrderBook,
   getInitialLastPrice,
@@ -20,6 +22,9 @@ import {
 
 export type UiMode = 'beginner' | 'expert'
 
+const MOCK_DELAY_SUBMIT_MS = 100
+const MOCK_DELAY_ACCEPT_MS = 120
+
 type TradingStore = {
   symbol: string
   lastPrice: number
@@ -30,6 +35,8 @@ type TradingStore = {
   orders: OrderRecordRow[]
   beginnerMode: boolean
   confirmOrders: boolean
+  /** 동시 모의 주문 1건만 (UI 비활성용) */
+  mockOrderInFlightId: string | null
   /** Injected later from WebSocket / host app */
   setSymbol: (symbol: string) => void
   applyOrderBook: (book: OrderBookSnapshot) => void
@@ -42,26 +49,40 @@ type TradingStore = {
   cancelOrder: (id: string) => void
   setBeginnerMode: (v: boolean) => void
   setConfirmOrders: (v: boolean) => void
+  setMockOrderInFlight: (id: string | null) => void
   /** Mock tick bundles book + price + tickers */
   applyMockTick: (payload: { lastPrice: number; orderBook: OrderBookSnapshot; tickers: TickerRow[] }) => void
   /** Demo close — no real trading */
   closePositionDemo: (id: string) => void
 }
 
-const last = getInitialLastPrice()
+const bootSpec = getSymbolSpec(MOCK_SYMBOL)
+const bootLast = getInitialLastPrice()
 
 export const useTradingStore = create<TradingStore>((set, get) => ({
-  symbol: MOCK_SYMBOL,
-  lastPrice: last,
-  orderBook: buildOrderBook(last),
+  symbol: bootSpec.symbol,
+  lastPrice: bootLast,
+  orderBook: buildOrderBook(bootLast, bootSpec),
   tickers: initialTickers,
   positions: initialPositions,
   fills: initialFills,
   orders: initialOrders,
   beginnerMode: false,
   confirmOrders: true,
+  mockOrderInFlightId: null,
 
-  setSymbol: (symbol) => set({ symbol }),
+  setSymbol: (symbol) => {
+    const spec = getSymbolSpec(symbol)
+    const sym = spec.symbol
+    const row = get().tickers.find((t) => t.symbol === sym)
+    const lp = row?.price ?? spec.referencePrice
+    const lastPrice = Number.isFinite(lp) ? lp : spec.referencePrice
+    set({
+      symbol: sym,
+      lastPrice,
+      orderBook: buildOrderBook(lastPrice, spec),
+    })
+  },
 
   applyOrderBook: (orderBook) =>
     set({
@@ -103,13 +124,15 @@ export const useTradingStore = create<TradingStore>((set, get) => ({
   cancelOrder: (id) =>
     set((s) => ({
       orders: safeArray(s.orders).map((o) =>
-        o.id === id ? { ...o, status: 'cancelled' as const } : o,
+        o.id === id ? { ...o, status: 'canceled' as const } : o,
       ),
     })),
 
   setBeginnerMode: (beginnerMode) => set({ beginnerMode }),
 
   setConfirmOrders: (confirmOrders) => set({ confirmOrders }),
+
+  setMockOrderInFlight: (mockOrderInFlightId) => set({ mockOrderInFlightId }),
 
   applyMockTick: ({ lastPrice, orderBook, tickers }) => {
     if (!Number.isFinite(lastPrice)) return
@@ -138,46 +161,71 @@ export const useTradingStore = create<TradingStore>((set, get) => ({
     })),
 }))
 
-export function placeSpeedOrderDemo(input: {
+export function submitMockSpeedOrder(input: {
   side: OrderSide
   orderType: 'market' | 'limit'
   quantity: number
   limitPrice?: number
-}): void {
+}): Promise<void> {
   const state = useTradingStore.getState()
-  const qty = Number.isFinite(input.quantity) && input.quantity > 0 ? input.quantity : 0
-  if (qty <= 0) return
+  if (state.mockOrderInFlightId != null) return Promise.resolve()
 
-  const execPrice =
+  const spec = getSymbolSpec(state.symbol)
+  const rawQty = Number(input.quantity)
+  const qty = roundToLotSize(rawQty, spec.lotSize)
+  if (!Number.isFinite(qty) || qty <= 0) return Promise.resolve()
+
+  const rawExec =
     input.orderType === 'market' || input.limitPrice == null
       ? state.lastPrice
       : input.limitPrice
 
-  if (!Number.isFinite(execPrice) || execPrice <= 0) return
+  if (!Number.isFinite(rawExec) || rawExec <= 0) return Promise.resolve()
 
-  const idBase = `${Date.now()}`
+  const execPrice = roundToTickSize(rawExec, spec.tickSize)
+  const limitStored =
+    input.orderType === 'limit' ? roundToTickSize(Number(input.limitPrice ?? rawExec), spec.tickSize) : null
+
+  const id = `o-${Date.now()}`
   const time = new Date().toLocaleTimeString('ko-KR', { hour12: false })
 
-  const fill: TradeFillRow = {
-    id: `f-${idBase}`,
-    symbol: state.symbol,
-    side: input.side,
-    price: execPrice,
-    quantity: qty,
-    time,
-  }
-
-  const order: OrderRecordRow = {
-    id: `o-${idBase}`,
+  const baseOrder: OrderRecordRow = {
+    id,
     symbol: state.symbol,
     side: input.side,
     type: input.orderType,
-    price: input.orderType === 'limit' ? input.limitPrice ?? execPrice : null,
+    price: input.orderType === 'limit' ? limitStored : null,
     quantity: qty,
-    status: 'filled',
+    status: 'submitting',
     time,
   }
 
-  state.pushFill(fill)
-  state.upsertOrder(order)
+  state.setMockOrderInFlight(id)
+  state.upsertOrder(baseOrder)
+
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      useTradingStore.getState().upsertOrder({ ...baseOrder, status: 'accepted' })
+      window.setTimeout(() => {
+        const st = useTradingStore.getState()
+        const fillTime = new Date().toLocaleTimeString('ko-KR', { hour12: false })
+        const fill: TradeFillRow = {
+          id: `f-${id}`,
+          symbol: baseOrder.symbol,
+          side: input.side,
+          price: execPrice,
+          quantity: qty,
+          time: fillTime,
+        }
+        st.upsertOrder({
+          ...baseOrder,
+          status: 'filled',
+          price: input.orderType === 'limit' ? limitStored : null,
+        })
+        st.pushFill(fill)
+        st.setMockOrderInFlight(null)
+        resolve()
+      }, MOCK_DELAY_ACCEPT_MS)
+    }, MOCK_DELAY_SUBMIT_MS)
+  })
 }

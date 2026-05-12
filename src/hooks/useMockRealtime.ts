@@ -7,8 +7,8 @@ export function useMockRealtime(enabled = true, intervalMs = 850): void {
   useEffect(() => {
     if (!enabled) return
     const id = window.setInterval(() => {
-      const { lastPrice, tickers, applyMockTick } = useTradingStore.getState()
-      const next = simulateTick(lastPrice, tickers)
+      const { lastPrice, tickers, symbol, applyMockTick } = useTradingStore.getState()
+      const next = simulateTick(symbol, lastPrice, tickers)
       applyMockTick(next)
     }, intervalMs)
     return () => window.clearInterval(id)

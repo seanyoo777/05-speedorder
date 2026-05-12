@@ -1,5 +1,6 @@
 import type { OrderBookSnapshot, TickerRow } from '../types/trading'
 import { buildOrderBook } from './mockData'
+import { getSymbolSpec } from '../symbols/registry'
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n))
@@ -11,12 +12,14 @@ function jitter(price: number, maxPct: number): number {
 }
 
 export function simulateTick(
+  activeSymbol: string,
   lastPrice: number,
   tickers: TickerRow[],
 ): { lastPrice: number; orderBook: OrderBookSnapshot; tickers: TickerRow[] } {
+  const spec = getSymbolSpec(activeSymbol)
   const nextLast = clamp(jitter(lastPrice, 0.00015), lastPrice * 0.985, lastPrice * 1.015)
   const nextTickers = tickers.map((t) => {
-    if (t.symbol === 'BTCUSDT') {
+    if (t.symbol === activeSymbol) {
       const p = nextLast
       const prev = t.price || p
       const inst = ((p - prev) / prev) * 100
@@ -32,7 +35,7 @@ export function simulateTick(
 
   return {
     lastPrice: nextLast,
-    orderBook: buildOrderBook(nextLast),
+    orderBook: buildOrderBook(nextLast, spec),
     tickers: nextTickers,
   }
 }
