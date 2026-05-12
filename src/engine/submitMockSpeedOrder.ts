@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand'
 import { mergeRiskSnapshotWithPositions } from '../domain/risk'
-import { speedOrderToast } from '../feedback/speedOrderToast'
+import { speedOrderUxFeedback } from '../feedback/speedOrderUxFeedback'
 import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
 import { getSymbolSpec } from '../symbols/registry'
 import type { OrderRecordRow, OrderSide } from '../types/trading'
@@ -23,19 +23,28 @@ export type SubmitMockSpeedOrderInput = {
 export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
   return function submitMockSpeedOrder(input: SubmitMockSpeedOrderInput): Promise<void> {
     const state = store.getState()
-    if (state.mockOrderInFlightId != null) return Promise.resolve()
+    if (state.mockOrderInFlightId != null) {
+      speedOrderUxFeedback(store, 'skip_busy', '주문 진행 중')
+      return Promise.resolve()
+    }
 
     const spec = getSymbolSpec(state.symbol)
     const rawQty = Number(input.quantity)
     const qty = roundQtyBySpec(spec, rawQty)
-    if (!Number.isFinite(qty) || qty <= 0) return Promise.resolve()
+    if (!Number.isFinite(qty) || qty <= 0) {
+      speedOrderUxFeedback(store, 'skip_qty', '수량 오류')
+      return Promise.resolve()
+    }
 
     const rawExec =
       input.orderType === 'market' || input.limitPrice == null
         ? state.lastPrice
         : input.limitPrice
 
-    if (!Number.isFinite(rawExec) || rawExec <= 0) return Promise.resolve()
+    if (!Number.isFinite(rawExec) || rawExec <= 0) {
+      speedOrderUxFeedback(store, 'skip_price', '가격 오류')
+      return Promise.resolve()
+    }
 
     const execPrice = roundPriceBySpec(spec, rawExec)
     const limitStored =
@@ -102,7 +111,9 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
           })
           const sideLabel = input.side === 'buy' ? 'BUY' : 'SELL'
           const specToast = getSymbolSpec(st.symbol)
-          speedOrderToast(`${sideLabel} ${formatByDecimals(qty, specToast.qtyDecimals)} ${specToast.symbol}`)
+          const pxStr = formatByDecimals(execPrice, specToast.priceDecimals)
+          const line = `${sideLabel} ${formatByDecimals(qty, specToast.qtyDecimals)} ${specToast.symbol} @ ${pxStr}`
+          speedOrderUxFeedback(store, 'fill', line)
           resolve()
         }, MOCK_DELAY_ACCEPT_MS)
       }, MOCK_DELAY_SUBMIT_MS)

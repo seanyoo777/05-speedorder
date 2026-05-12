@@ -93,3 +93,19 @@ export type ConditionalOrderRow = {
 
 /** 조건 체결 시 예상 분류 (UI 표시) */
 export type ConditionalOutcomeLabel = '신규진입' | '부분청산' | '완전청산' | '반전진입'
+
+/** 최근 주문/스킵 UX 로그 (store 최대 5건) */
+export type SpeedOrderActionKind =
+  | 'fill'
+  | 'mit_register'
+  | 'stop_register'
+  | 'skip_busy'
+  | 'skip_qty'
+  | 'skip_price'
+
+export type SpeedOrderActionLogEntry = {
+  id: string
+  at: number
+  kind: SpeedOrderActionKind
+  text: string
+}

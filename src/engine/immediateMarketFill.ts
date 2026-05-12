@@ -1,6 +1,6 @@
 import type { StoreApi } from 'zustand'
 import { mergeRiskSnapshotWithPositions } from '../domain/risk'
-import { speedOrderToast } from '../feedback/speedOrderToast'
+import { speedOrderUxFeedback } from '../feedback/speedOrderUxFeedback'
 import { getSymbolSpec } from '../symbols/registry'
 import type { OrderRecordRow, OrderSide } from '../types/trading'
 import type { TradingStore } from '../store/tradingStoreTypes'
@@ -18,14 +18,23 @@ export function executeImmediateMockMarketOrder(
   input: { side: OrderSide; quantity: number },
 ): boolean {
   const st = store.getState()
-  if (st.mockOrderInFlightId != null) return false
+  if (st.mockOrderInFlightId != null) {
+    speedOrderUxFeedback(store, 'skip_busy', '주문 진행 중')
+    return false
+  }
 
   const spec = getSymbolSpec(st.symbol)
   const qty = roundQtyBySpec(spec, Number(input.quantity))
-  if (!Number.isFinite(qty) || qty <= 0) return false
+  if (!Number.isFinite(qty) || qty <= 0) {
+    speedOrderUxFeedback(store, 'skip_qty', '수량 오류')
+    return false
+  }
 
   const px = st.lastPrice
-  if (!Number.isFinite(px) || px <= 0) return false
+  if (!Number.isFinite(px) || px <= 0) {
+    speedOrderUxFeedback(store, 'skip_price', '가격 오류')
+    return false
+  }
 
   const ts = Date.now()
   const time = new Date(ts).toLocaleTimeString('ko-KR', { hour12: false })
@@ -61,7 +70,9 @@ export function executeImmediateMockMarketOrder(
   }))
 
   const sideLabel = input.side === 'buy' ? 'BUY' : 'SELL'
-  speedOrderToast(`${sideLabel} ${formatByDecimals(qty, spec.qtyDecimals)} ${spec.symbol}`)
+  const pxStr = formatByDecimals(px, spec.priceDecimals)
+  const line = `${sideLabel} ${formatByDecimals(qty, spec.qtyDecimals)} ${spec.symbol} @ ${pxStr}`
+  speedOrderUxFeedback(store, 'fill', line)
 
   return true
 }

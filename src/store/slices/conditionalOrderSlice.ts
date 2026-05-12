@@ -27,7 +27,18 @@ export const createConditionalOrderSlice: StateCreator<
     const spec = getSymbolSpec(sym)
     const tp = roundPriceBySpec(spec, Number(input.triggerPrice))
     const qty = roundQtyBySpec(spec, Number(input.quantity))
-    if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(qty) || qty <= 0) return
+    const badQty = !Number.isFinite(qty) || qty <= 0
+    const badPrice = !Number.isFinite(tp) || tp <= 0
+    if (badQty) {
+      speedOrderToast('수량 오류')
+      get().pushOrderActionLog({ kind: 'skip_qty', text: '수량 오류' })
+      return
+    }
+    if (badPrice) {
+      speedOrderToast('가격 오류')
+      get().pushOrderActionLog({ kind: 'skip_price', text: '가격 오류' })
+      return
+    }
 
     const ts = Date.now()
     const time = new Date(ts).toLocaleTimeString('ko-KR', { hour12: false })
@@ -48,9 +59,11 @@ export const createConditionalOrderSlice: StateCreator<
     }))
 
     if (input.kind === 'MIT') {
-      speedOrderToast(`MIT ${input.side === 'buy' ? 'BUY' : 'SELL'} 등록`)
+      speedOrderToast('MIT 등록')
+      get().pushOrderActionLog({ kind: 'mit_register', text: 'MIT 등록' })
     } else {
-      speedOrderToast('STOP LOSS 등록')
+      speedOrderToast('STOP 등록')
+      get().pushOrderActionLog({ kind: 'stop_register', text: 'STOP 등록' })
     }
   },
 

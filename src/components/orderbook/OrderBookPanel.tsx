@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import {
   ORDER_BOOK_PRESET_LABEL,
@@ -14,6 +14,7 @@ import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
 import { roundPriceBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
+import { RecentOrderActionsLog } from '../speedorder/RecentOrderActionsLog'
 
 type BookRow = { price: number; quantity: number; cum: number }
 
@@ -120,7 +121,7 @@ export function OrderBookPanel() {
   const tk = effectiveOrderBookTokens(orderBookDesignPreset, orderBookColorInvert)
 
   const [designOpen, setDesignOpen] = useState(false)
-  const [flashRowKey, setFlashRowKey] = useState<string | null>(null)
+  const [execFlash, setExecFlash] = useState<{ key: string; buy: boolean } | null>(null)
   const [pulseRowKey, setPulseRowKey] = useState<string | null>(null)
   const [centerFlash, setCenterFlash] = useState<'up' | 'down' | null>(null)
   const [centerDir, setCenterDir] = useState(0)
@@ -129,6 +130,8 @@ export function OrderBookPanel() {
   const prevLastRef = useRef<number | null>(null)
   const symbolRef = useRef(symbol)
   const centerFlashTimerRef = useRef<number | null>(null)
+  const highlightClearTimerRef = useRef<number | null>(null)
+  const highlightAnchorRef = useRef<number | null>(null)
 
   useLayoutEffect(() => {
     const symChanged = symbolRef.current !== symbol
@@ -145,9 +148,21 @@ export function OrderBookPanel() {
   useEffect(
     () => () => {
       if (oneClickTimerRef.current != null) window.clearTimeout(oneClickTimerRef.current)
+      if (highlightClearTimerRef.current != null) {
+        window.clearTimeout(highlightClearTimerRef.current)
+        highlightClearTimerRef.current = null
+      }
     },
     [],
   )
+
+  useEffect(() => {
+    if (highlightClearTimerRef.current != null) {
+      window.clearTimeout(highlightClearTimerRef.current)
+      highlightClearTimerRef.current = null
+    }
+    highlightAnchorRef.current = null
+  }, [symbol])
 
   useEffect(() => {
     if (!designOpen) return
@@ -185,6 +200,28 @@ export function OrderBookPanel() {
   }, [centerDir])
 
   const spec = getSymbolSpec(symbol)
+
+  const armHighlightClear = useCallback(
+    (roundedPrice: number) => {
+      if (highlightClearTimerRef.current != null) {
+        window.clearTimeout(highlightClearTimerRef.current)
+        highlightClearTimerRef.current = null
+      }
+      highlightAnchorRef.current = roundedPrice
+      highlightClearTimerRef.current = window.setTimeout(() => {
+        highlightClearTimerRef.current = null
+        const anchor = highlightAnchorRef.current
+        highlightAnchorRef.current = null
+        const cur = useTradingStore.getState().orderBookHighlightPrice
+        if (anchor == null || cur == null) return
+        if (Math.abs(cur - anchor) < spec.tickSize * 0.51) {
+          setOrderBookHighlightPrice(null)
+        }
+      }, 1000)
+    },
+    [setOrderBookHighlightPrice, spec.tickSize],
+  )
+
   const askRowsFull = buildAskRows(orderBook.asks)
   const bidRowsFull = buildBidRows(orderBook.bids)
   const askRows = askRowsFull.length > ROWS ? askRowsFull.slice(-ROWS) : askRowsFull
@@ -223,10 +260,12 @@ export function OrderBookPanel() {
   const centerPriceClass =
     centerDir > 0 ? tk.priceUpClass : centerDir < 0 ? tk.priceDownClass : tk.priceFlatClass
 
-  const triggerFlash = (side: 'ask' | 'bid', rowPrice: number) => {
+  const triggerExecFlash = (side: 'ask' | 'bid', rowPrice: number, orderBuy: boolean) => {
     const key = `${side}-${rowPrice}`
-    setFlashRowKey(key)
-    window.setTimeout(() => setFlashRowKey((k) => (k === key ? null : k)), 320)
+    setExecFlash({ key, buy: orderBuy })
+    window.setTimeout(() => {
+      setExecFlash((prev) => (prev?.key === key ? null : prev))
+    }, 480)
   }
 
   const confirmIfNeeded = () => {
@@ -241,7 +280,7 @@ export function OrderBookPanel() {
       side: orderSide,
       quantity: orderBookOrderQty,
     })
-    if (ok) triggerFlash(side, rowPrice)
+    if (ok) triggerExecFlash(side, rowPrice, orderSide === 'buy')
   }
 
   const pulseRow = (side: 'ask' | 'bid', p: number) => {
@@ -255,6 +294,7 @@ export function OrderBookPanel() {
     setOrderBookPendingLimitPrice(p)
     setOrderBookPendingTriggerPrice(p)
     setOrderBookHighlightPrice(p)
+    armHighlightClear(p)
     pulseRow(side, p)
 
     if (!orderBookOneClickEnabled) return
@@ -271,6 +311,7 @@ export function OrderBookPanel() {
     setOrderBookPendingLimitPrice(p)
     setOrderBookPendingTriggerPrice(p)
     setOrderBookHighlightPrice(p)
+    armHighlightClear(p)
     pulseRow(side, p)
     if (oneClickTimerRef.current != null) {
       window.clearTimeout(oneClickTimerRef.current)
@@ -482,7 +523,13 @@ export function OrderBookPanel() {
       orderBookHighlightPrice != null &&
       Math.abs(orderBookHighlightPrice - rowDisplayPrice) < spec.tickSize * 0.51
     const rowKey = `${side}-${rowDisplayPrice}`
-    const isFlash = flashRowKey === rowKey
+    const isExec = execFlash?.key === rowKey
+    const execClass =
+      isExec && execFlash
+        ? execFlash.buy
+          ? 'z-[1] bg-emerald-500/22 ring-1 ring-inset ring-emerald-400/35'
+          : 'z-[1] bg-rose-500/22 ring-1 ring-inset ring-rose-400/35'
+        : ''
     const isPulse = pulseRowKey === rowKey
     return (
       <button
@@ -490,8 +537,8 @@ export function OrderBookPanel() {
         type="button"
         className={`relative grid w-full min-w-0 shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 items-stretch border-b border-[#1f2937]/30 transition-colors duration-100 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} ${tk.rowFontClass} ${tk.rowCellPaddingClass} ${
           hl ? 'z-[1] bg-violet-500/[0.07] ring-1 ring-inset ring-violet-500/35' : ''
-        } ${isFlash ? 'z-[1] motion-safe:animate-pulse bg-violet-500/18 ring-1 ring-inset ring-violet-400/25' : ''} ${
-          isPulse && !isFlash ? 'z-[1] bg-violet-500/[0.06] ring-1 ring-inset ring-violet-400/20' : ''
+        } ${execClass} ${
+          isPulse && !isExec ? 'z-[1] bg-violet-500/[0.06] ring-1 ring-inset ring-violet-400/20' : ''
         } hover:bg-[#0b1118]/90 active:bg-[#0b1118]`}
         onClick={() => handlePriceClick(r.price, side)}
         onDoubleClick={() => handlePriceDoubleClick(r.price, side)}
@@ -535,78 +582,81 @@ export function OrderBookPanel() {
       >
         {headerToolbar}
 
-        {bookEmpty ? (
-          <p className="flex flex-1 items-center justify-center px-2 py-6 text-center text-[10px] text-zinc-500">
-            호가 없음
-          </p>
-        ) : (
-          <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto_1fr] gap-0 bg-[#070b12]">
-            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
-              {colHeader}
-              <div className={`flex min-h-0 flex-1 flex-col overflow-hidden`}>
-                {Array.from({ length: askPads }).map((_, i) => (
-                  <div
-                    key={`ask-pad-${i}`}
-                    className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
-                  />
-                ))}
-                {askRows.map((r) => renderRow(r, 'ask', tk.askPriceClass))}
+        <div className="flex min-h-0 flex-1 flex-col">
+          {bookEmpty ? (
+            <p className="flex flex-1 items-center justify-center px-2 py-6 text-center text-[10px] text-zinc-500">
+              호가 없음
+            </p>
+          ) : (
+            <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto_1fr] gap-0 bg-[#070b12]">
+              <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
+                {colHeader}
+                <div className={`flex min-h-0 flex-1 flex-col overflow-hidden`}>
+                  {Array.from({ length: askPads }).map((_, i) => (
+                    <div
+                      key={`ask-pad-${i}`}
+                      className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                    />
+                  ))}
+                  {askRows.map((r) => renderRow(r, 'ask', tk.askPriceClass))}
+                </div>
               </div>
-            </div>
 
-            <div
-              className={`relative shrink-0 text-center ${tk.centerBgClass} ${tk.centerShellClass}`}
-            >
-              {centerFlash === 'up' ? (
-                <span
-                  className={`pointer-events-none absolute inset-0 z-[2] ${tk.tradeUpFlashClass} motion-safe:animate-pulse`}
-                  aria-hidden
-                />
-              ) : null}
-              {centerFlash === 'down' ? (
-                <span
-                  className={`pointer-events-none absolute inset-0 z-[2] ${tk.tradeDownFlashClass} motion-safe:animate-pulse`}
-                  aria-hidden
-                />
-              ) : null}
-              <div className={`relative z-[1] font-mono leading-none ${tk.centerPriceFontClass} ${centerPriceClass}`}>
-                {fmtP(lp)}
-              </div>
               <div
-                className={`relative z-[1] mt-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 ${tk.centerMetaFontClass}`}
+                className={`relative shrink-0 text-center ${tk.centerBgClass} ${tk.centerShellClass}`}
               >
-                <span
-                  className={
-                    changePct > 0
-                      ? tk.priceUpClass
-                      : changePct < 0
-                        ? tk.priceDownClass
-                        : tk.priceFlatClass
-                  }
-                >
-                  {changePct >= 0 ? '+' : ''}
-                  {changePct.toFixed(2)}%
-                </span>
-                <span className={`font-mono ${tk.centerMutedClass}`}>
-                  SP {formatByDecimals(spread, spec.priceDecimals)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
-              {colHeader}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {bidRows.map((r) => renderRow(r, 'bid', tk.bidPriceClass))}
-                {Array.from({ length: bidPads }).map((_, i) => (
-                  <div
-                    key={`bid-pad-${i}`}
-                    className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                {centerFlash === 'up' ? (
+                  <span
+                    className={`pointer-events-none absolute inset-0 z-[2] ${tk.tradeUpFlashClass} motion-safe:animate-pulse`}
+                    aria-hidden
                   />
-                ))}
+                ) : null}
+                {centerFlash === 'down' ? (
+                  <span
+                    className={`pointer-events-none absolute inset-0 z-[2] ${tk.tradeDownFlashClass} motion-safe:animate-pulse`}
+                    aria-hidden
+                  />
+                ) : null}
+                <div className={`relative z-[1] font-mono leading-none ${tk.centerPriceFontClass} ${centerPriceClass}`}>
+                  {fmtP(lp)}
+                </div>
+                <div
+                  className={`relative z-[1] mt-1 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5 ${tk.centerMetaFontClass}`}
+                >
+                  <span
+                    className={
+                      changePct > 0
+                        ? tk.priceUpClass
+                        : changePct < 0
+                          ? tk.priceDownClass
+                          : tk.priceFlatClass
+                    }
+                  >
+                    {changePct >= 0 ? '+' : ''}
+                    {changePct.toFixed(2)}%
+                  </span>
+                  <span className={`font-mono ${tk.centerMutedClass}`}>
+                    SP {formatByDecimals(spread, spec.priceDecimals)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
+                {colHeader}
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  {bidRows.map((r) => renderRow(r, 'bid', tk.bidPriceClass))}
+                  {Array.from({ length: bidPads }).map((_, i) => (
+                    <div
+                      key={`bid-pad-${i}`}
+                      className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        <RecentOrderActionsLog variant="cexDom" />
       </div>
     </PanelShell>
   )

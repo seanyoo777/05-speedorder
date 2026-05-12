@@ -8,6 +8,8 @@ import type {
   OrderRecordRow,
   OrderSide,
   PositionRow,
+  SpeedOrderActionKind,
+  SpeedOrderActionLogEntry,
   TickerRow,
   TradeFillRow,
 } from '../types/trading'
@@ -50,6 +52,8 @@ export type TradingStoreState = {
   uiCompactMode: boolean
   /** DOM 열 최소 너비(px), null이면 기본 min-w (localStorage) */
   uiDomWidthPx: number | null
+  /** 최근 주문·스킵 UX 로그 (최대 5) */
+  orderActionLog: SpeedOrderActionLogEntry[]
 }
 
 export type TradingStoreActions = {
@@ -89,6 +93,7 @@ export type TradingStoreActions = {
   setUiOrderBookFontScale: (v: number) => void
   setUiCompactMode: (v: boolean) => void
   setUiDomWidthPx: (v: number | null) => void
+  pushOrderActionLog: (e: { kind: SpeedOrderActionKind; text: string; id?: string }) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions

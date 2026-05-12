@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createSubmitMockSpeedOrder } from '../engine/submitMockSpeedOrder'
 import { createConditionalOrderSlice } from './slices/conditionalOrderSlice'
+import { createOrderActionLogSlice } from './slices/orderActionLogSlice'
 import { createOrderBookUiSlice } from './slices/orderBookUiSlice'
 import { createOrderSlice } from './slices/orderSlice'
 import { createPositionSlice } from './slices/positionSlice'
@@ -18,6 +19,7 @@ export const useTradingStore = create<TradingStore>()((...args) => ({
   ...createOrderSlice(...args),
   ...createPositionSlice(...args),
   ...createUiRiskSlice(...args),
+  ...createOrderActionLogSlice(...args),
   ...createConditionalOrderSlice(...args),
   ...createOrderBookUiSlice(...args),
   ...createUiPrefsSlice(...args),
