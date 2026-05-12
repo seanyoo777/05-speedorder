@@ -20,6 +20,7 @@ export const createOrderBookUiSlice: StateCreator<
     | 'orderBookOneClickEnabled'
     | 'orderBookDoubleClickEnabled'
     | 'orderBookPendingLimitPrice'
+    | 'orderBookPendingTriggerPrice'
     | 'orderBookHighlightPrice'
     | 'orderBookDesignPreset'
     | 'orderBookColorInvert'
@@ -28,6 +29,8 @@ export const createOrderBookUiSlice: StateCreator<
     | 'setOrderBookDoubleClickEnabled'
     | 'setOrderBookPendingLimitPrice'
     | 'clearOrderBookPendingLimitPrice'
+    | 'setOrderBookPendingTriggerPrice'
+    | 'clearOrderBookPendingTriggerPrice'
     | 'setOrderBookHighlightPrice'
     | 'setOrderBookDesignPreset'
     | 'setOrderBookColorInvert'
@@ -37,6 +40,7 @@ export const createOrderBookUiSlice: StateCreator<
   orderBookOneClickEnabled: false,
   orderBookDoubleClickEnabled: false,
   orderBookPendingLimitPrice: null as number | null,
+  orderBookPendingTriggerPrice: null as number | null,
   orderBookHighlightPrice: null as number | null,
   orderBookDesignPreset: readOrderBookPresetFromLs(),
   orderBookColorInvert: readOrderBookInvertFromLs(),
@@ -53,6 +57,10 @@ export const createOrderBookUiSlice: StateCreator<
   setOrderBookPendingLimitPrice: (orderBookPendingLimitPrice) => set({ orderBookPendingLimitPrice }),
 
   clearOrderBookPendingLimitPrice: () => set({ orderBookPendingLimitPrice: null }),
+
+  setOrderBookPendingTriggerPrice: (orderBookPendingTriggerPrice) => set({ orderBookPendingTriggerPrice }),
+
+  clearOrderBookPendingTriggerPrice: () => set({ orderBookPendingTriggerPrice: null }),
 
   setOrderBookHighlightPrice: (orderBookHighlightPrice) => set({ orderBookHighlightPrice }),
 

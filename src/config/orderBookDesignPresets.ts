@@ -20,9 +20,9 @@ export type OrderBookDesignPresetId =
 export type OrderBookPresetTag = 'compact' | 'pro'
 
 /** 코인 거래소 DOM 기본: 매수측(비드) 차분 그린, 매도측(애스크) 차분 레드 */
-const DOM_ROW_BORDER = 'border-[#1f2937]/35'
+const DOM_ROW_BORDER = 'border-[#1f2937]/30'
 const DOM_CENTER =
-  'rounded-sm border border-[#1f2937] bg-[#0b1118] px-2 py-2.5 shadow-[inset_0_1px_0_0_rgba(139,92,246,0.06)] ring-1 ring-inset ring-violet-500/12'
+  'rounded-[6px] border border-[#1f2937]/30 bg-[#0b1118] px-2 py-2.5 shadow-[inset_0_0_28px_-10px_rgba(139,92,246,0.14),inset_0_1px_0_0_rgba(139,92,246,0.06)] ring-1 ring-inset ring-violet-500/15'
 
 export type OrderBookVisualTokens = {
   bidPriceClass: string

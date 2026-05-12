@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 type Props = {
   title: string
@@ -7,6 +7,7 @@ type Props = {
   action?: ReactNode
   children: ReactNode
   className?: string
+  style?: CSSProperties
   /** false면 본문 세로 스크롤 없음(호가 DOM 등 전용) */
   scrollBody?: boolean
   /** TGX-CEX SpeedOrderHtsPanel과 동일한 다크 코인 거래소 카드 */
@@ -19,18 +20,19 @@ export function PanelShell({
   action,
   children,
   className = '',
+  style,
   scrollBody = true,
   variant = 'default',
 }: Props) {
   const isDom = variant === 'cexDom'
   const shell = isDom
-    ? 'rounded-lg border border-[#1f2937] bg-[#080c14] text-[12px] text-zinc-300'
+    ? 'rounded-lg border border-[#1f2937]/30 bg-[#080c14] text-[12px] text-zinc-300'
     : 'rounded-lg border border-so-border bg-so-surface'
-  const headerDom = 'shrink-0 border-b border-[#1f2937] bg-[#070b12] px-3 py-2'
+  const headerDom = 'shrink-0 border-b border-[#1f2937]/30 bg-[#070b12] px-3 py-2'
   const headerDefault = 'flex shrink-0 items-center justify-between border-b border-so-border px-3 py-2'
 
   return (
-    <section className={`flex min-h-0 flex-col ${shell} ${className}`}>
+    <section className={`flex min-h-0 flex-col ${shell} ${className}`} style={style}>
       <header className={isDom ? headerDom : headerDefault}>
         {isDom ? (
           <div className="flex min-w-0 items-start justify-between gap-2">

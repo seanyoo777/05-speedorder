@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { speedOrderToast } from '../../feedback/speedOrderToast'
 import type { ConditionalOrderKind, ConditionalOrderRow, OrderSide } from '../../types/trading'
 import { getSymbolSpec } from '../../symbols/registry'
 import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
@@ -45,6 +46,12 @@ export const createConditionalOrderSlice: StateCreator<
     set((s) => ({
       conditionalOrders: [row, ...safeArray(s.conditionalOrders)].slice(0, 100),
     }))
+
+    if (input.kind === 'MIT') {
+      speedOrderToast(`MIT ${input.side === 'buy' ? 'BUY' : 'SELL'} 등록`)
+    } else {
+      speedOrderToast('STOP LOSS 등록')
+    }
   },
 
   cancelConditionalOrder: (id) =>

@@ -1,8 +1,10 @@
 import type { StoreApi } from 'zustand'
 import { mergeRiskSnapshotWithPositions } from '../domain/risk'
+import { speedOrderToast } from '../feedback/speedOrderToast'
 import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
 import { getSymbolSpec } from '../symbols/registry'
 import type { OrderRecordRow, OrderSide } from '../types/trading'
+import { formatByDecimals } from '../utils/format'
 import { roundPriceBySpec, roundQtyBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
 import type { TradingStore } from '../store/tradingStoreTypes'
@@ -98,6 +100,9 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
               riskSnapshot: mergeRiskSnapshotWithPositions(positions, s.riskSnapshot),
             }
           })
+          const sideLabel = input.side === 'buy' ? 'BUY' : 'SELL'
+          const specToast = getSymbolSpec(st.symbol)
+          speedOrderToast(`${sideLabel} ${formatByDecimals(qty, specToast.qtyDecimals)} ${specToast.symbol}`)
           resolve()
         }, MOCK_DELAY_ACCEPT_MS)
       }, MOCK_DELAY_SUBMIT_MS)

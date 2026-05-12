@@ -78,9 +78,18 @@ export function OrderBookPanel() {
     setOrderBookOneClickEnabled,
     setOrderBookDoubleClickEnabled,
     setOrderBookPendingLimitPrice,
+    setOrderBookPendingTriggerPrice,
     setOrderBookHighlightPrice,
     setOrderBookDesignPreset,
     setOrderBookColorInvert,
+    uiOrderBookFontScale,
+    uiCompactMode,
+    uiDomWidthPx,
+    uiFontScale,
+    setUiFontScale,
+    setUiOrderBookFontScale,
+    setUiCompactMode,
+    setUiDomWidthPx,
   } = useTradingStore(
     useShallow((s) => ({
       orderBookOrderQty: s.orderBookOrderQty,
@@ -89,13 +98,22 @@ export function OrderBookPanel() {
       orderBookHighlightPrice: s.orderBookHighlightPrice,
       orderBookDesignPreset: s.orderBookDesignPreset,
       orderBookColorInvert: s.orderBookColorInvert,
+      uiOrderBookFontScale: s.uiOrderBookFontScale,
+      uiCompactMode: s.uiCompactMode,
+      uiDomWidthPx: s.uiDomWidthPx,
+      uiFontScale: s.uiFontScale,
       setOrderBookOrderQty: s.setOrderBookOrderQty,
       setOrderBookOneClickEnabled: s.setOrderBookOneClickEnabled,
       setOrderBookDoubleClickEnabled: s.setOrderBookDoubleClickEnabled,
       setOrderBookPendingLimitPrice: s.setOrderBookPendingLimitPrice,
+      setOrderBookPendingTriggerPrice: s.setOrderBookPendingTriggerPrice,
       setOrderBookHighlightPrice: s.setOrderBookHighlightPrice,
       setOrderBookDesignPreset: s.setOrderBookDesignPreset,
       setOrderBookColorInvert: s.setOrderBookColorInvert,
+      setUiFontScale: s.setUiFontScale,
+      setUiOrderBookFontScale: s.setUiOrderBookFontScale,
+      setUiCompactMode: s.setUiCompactMode,
+      setUiDomWidthPx: s.setUiDomWidthPx,
     })),
   )
 
@@ -196,6 +214,12 @@ export function OrderBookPanel() {
   const fmtP = (n: number) => formatByDecimals(n, spec.priceDecimals)
   const fmtQ = (n: number) => formatByDecimals(n, spec.qtyDecimals)
 
+  const obFontMult = uiOrderBookFontScale * (uiCompactMode ? 0.94 : 1)
+  const markerLabel =
+    orderBookHighlightPrice != null
+      ? `▶ ${formatByDecimals(roundPriceBySpec(spec, orderBookHighlightPrice), spec.priceDecimals)}`
+      : null
+
   const centerPriceClass =
     centerDir > 0 ? tk.priceUpClass : centerDir < 0 ? tk.priceDownClass : tk.priceFlatClass
 
@@ -223,12 +247,13 @@ export function OrderBookPanel() {
   const pulseRow = (side: 'ask' | 'bid', p: number) => {
     const key = `${side}-${p}`
     setPulseRowKey(key)
-    window.setTimeout(() => setPulseRowKey((k) => (k === key ? null : k)), 380)
+    window.setTimeout(() => setPulseRowKey((k) => (k === key ? null : k)), 300)
   }
 
   const handlePriceClick = (rawPrice: number, side: 'ask' | 'bid') => {
     const p = roundPriceBySpec(spec, rawPrice)
     setOrderBookPendingLimitPrice(p)
+    setOrderBookPendingTriggerPrice(p)
     setOrderBookHighlightPrice(p)
     pulseRow(side, p)
 
@@ -244,6 +269,7 @@ export function OrderBookPanel() {
   const handlePriceDoubleClick = (rawPrice: number, side: 'ask' | 'bid') => {
     const p = roundPriceBySpec(spec, rawPrice)
     setOrderBookPendingLimitPrice(p)
+    setOrderBookPendingTriggerPrice(p)
     setOrderBookHighlightPrice(p)
     pulseRow(side, p)
     if (oneClickTimerRef.current != null) {
@@ -261,14 +287,14 @@ export function OrderBookPanel() {
     <div className="relative" ref={designRef}>
       <button
         type="button"
-        className="rounded border border-[#1f2937] bg-[#0b1118] px-1.5 py-0.5 text-[9px] font-medium text-zinc-500 transition hover:border-violet-500/40 hover:text-violet-200/90"
+        className="rounded border border-[#1f2937]/30 bg-[#0b1118] px-1.5 py-0.5 text-[9px] font-medium text-zinc-500 transition hover:border-violet-500/40 hover:text-violet-200/90"
         aria-expanded={designOpen}
         onClick={() => setDesignOpen((o) => !o)}
       >
         디자인
       </button>
       {designOpen ? (
-        <div className="absolute right-0 z-50 mt-1 w-[13.5rem] overflow-hidden rounded-lg border border-[#1f2937] bg-[#0b1118] text-[10px] shadow-2xl ring-1 ring-violet-500/10">
+        <div className="absolute right-0 z-50 mt-1 w-[15.5rem] overflow-hidden rounded-lg border border-[#1f2937]/30 bg-[#0b1118] text-[10px] shadow-2xl ring-1 ring-violet-500/10">
           <div className="border-b border-[#1f2937] bg-[#070b12] px-2.5 py-2">
             <div className="text-[9px] font-medium uppercase tracking-wide text-zinc-500">현재 프리셋</div>
             <div className="mt-0.5 truncate text-[11px] font-semibold text-zinc-100">
@@ -315,7 +341,61 @@ export function OrderBookPanel() {
               )
             })}
           </div>
-          <div className="border-t border-[#1f2937] bg-[#070b12] px-2.5 py-2">
+          <div className="space-y-2 border-t border-[#1f2937]/30 bg-[#070b12] px-2.5 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wide text-zinc-500">화면</div>
+            <label className="block text-[9px] text-zinc-500">
+              패널 글자
+              <input
+                type="range"
+                min={0.8}
+                max={1.25}
+                step={0.05}
+                className="mt-1 w-full accent-violet-500"
+                value={uiFontScale}
+                onChange={(e) => setUiFontScale(Number(e.target.value))}
+              />
+              <span className="font-mono text-zinc-400">{uiFontScale.toFixed(2)}×</span>
+            </label>
+            <label className="block text-[9px] text-zinc-500">
+              호가 글자
+              <input
+                type="range"
+                min={0.8}
+                max={1.25}
+                step={0.05}
+                className="mt-1 w-full accent-violet-500"
+                value={uiOrderBookFontScale}
+                onChange={(e) => setUiOrderBookFontScale(Number(e.target.value))}
+              />
+              <span className="font-mono text-zinc-400">{uiOrderBookFontScale.toFixed(2)}×</span>
+            </label>
+            <label className="flex cursor-pointer items-center justify-between gap-2 text-[10px] text-zinc-400">
+              <span>컴팩트 모드</span>
+              <input
+                type="checkbox"
+                className="accent-violet-500"
+                checked={uiCompactMode}
+                onChange={(e) => setUiCompactMode(e.target.checked)}
+              />
+            </label>
+            <label className="block text-[9px] text-zinc-500">
+              DOM 최소 너비 (px, 비우면 기본)
+              <input
+                type="number"
+                min={220}
+                max={560}
+                placeholder="260"
+                className="mt-1 w-full rounded border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1 font-mono text-[10px] text-zinc-200 outline-none"
+                value={uiDomWidthPx ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === '') setUiDomWidthPx(null)
+                  else setUiDomWidthPx(Number(v))
+                }}
+              />
+            </label>
+          </div>
+          <div className="border-t border-[#1f2937]/30 bg-[#070b12] px-2.5 py-2">
             <label className="flex cursor-pointer items-center gap-2 text-[10px] text-zinc-400 hover:text-zinc-200">
               <input
                 type="checkbox"
@@ -332,10 +412,10 @@ export function OrderBookPanel() {
   )
 
   const headerToolbar = (
-    <div className="flex min-w-0 shrink-0 flex-col gap-1.5 border-b border-[#1f2937] bg-[#070b12] px-2 py-1.5">
+    <div className="flex min-w-0 shrink-0 flex-col gap-1.5 border-b border-[#1f2937]/30 bg-[#070b12] px-2 py-1.5">
       <div className="flex min-w-0 items-center gap-2">
         <span className="shrink-0 text-[10px] font-medium text-zinc-500">수량</span>
-        <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#1f2937] bg-[#0b1118] px-2 py-1">
+        <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1">
           <input
             type="number"
             step={spec.lotSize}
@@ -347,7 +427,7 @@ export function OrderBookPanel() {
         </div>
       </div>
       <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-        <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937] bg-[#0b1118] px-2 py-1.5">
+        <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1.5">
           <span className="text-[10px] text-zinc-400">원클릭 주문</span>
           <input
             type="checkbox"
@@ -356,7 +436,7 @@ export function OrderBookPanel() {
             onChange={(e) => setOrderBookOneClickEnabled(e.target.checked)}
           />
         </label>
-        <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937] bg-[#0b1118] px-2 py-1.5">
+        <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1.5">
           <span className="text-[10px] text-zinc-400">더블클릭 주문</span>
           <input
             type="checkbox"
@@ -366,12 +446,18 @@ export function OrderBookPanel() {
           />
         </label>
       </div>
+      {markerLabel ? (
+        <div className="flex min-w-0 items-center gap-1.5 rounded border border-violet-500/25 bg-violet-500/[0.06] px-2 py-1 font-mono text-[0.95em] leading-none text-violet-100/95">
+          <span className="shrink-0 text-violet-400">트리거</span>
+          <span className="min-w-0 truncate">{markerLabel}</span>
+        </div>
+      ) : null}
     </div>
   )
 
   const colHeader = (
     <div
-      className={`grid shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 border-b border-[#1f2937]/55 bg-[#070b12] ${tk.headerFontClass} ${tk.rowCellPaddingClass}`}
+      className={`grid shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 border-b border-[#1f2937]/30 bg-[#070b12] ${tk.headerFontClass} ${tk.rowCellPaddingClass}`}
     >
       <span className="block text-right font-medium">가격</span>
       <span className="block text-right font-medium">수량</span>
@@ -402,7 +488,7 @@ export function OrderBookPanel() {
       <button
         key={rowKey}
         type="button"
-        className={`relative grid w-full min-w-0 shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 items-stretch border-b border-[#1f2937]/30 transition-colors duration-100 ${tk.rowHeightClass} ${tk.rowFontClass} ${tk.rowCellPaddingClass} ${
+        className={`relative grid w-full min-w-0 shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 items-stretch border-b border-[#1f2937]/30 transition-colors duration-100 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} ${tk.rowFontClass} ${tk.rowCellPaddingClass} ${
           hl ? 'z-[1] bg-violet-500/[0.07] ring-1 ring-inset ring-violet-500/35' : ''
         } ${isFlash ? 'z-[1] motion-safe:animate-pulse bg-violet-500/18 ring-1 ring-inset ring-violet-400/25' : ''} ${
           isPulse && !isFlash ? 'z-[1] bg-violet-500/[0.06] ring-1 ring-inset ring-violet-400/20' : ''
@@ -440,9 +526,13 @@ export function OrderBookPanel() {
       variant="cexDom"
       action={designAction}
       className="h-full min-h-[280px] min-w-[260px]"
+      style={uiDomWidthPx != null ? { minWidth: uiDomWidthPx } : undefined}
       scrollBody={false}
     >
-      <div className="flex h-full min-h-0 flex-col">
+      <div
+        className="flex h-full min-h-0 flex-col"
+        style={{ fontSize: `calc(11px * ${obFontMult})` }}
+      >
         {headerToolbar}
 
         {bookEmpty ? (
@@ -451,13 +541,13 @@ export function OrderBookPanel() {
           </p>
         ) : (
           <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto_1fr] gap-0 bg-[#070b12]">
-            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/50 bg-[#070b12]">
+            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
               {colHeader}
               <div className={`flex min-h-0 flex-1 flex-col overflow-hidden`}>
                 {Array.from({ length: askPads }).map((_, i) => (
                   <div
                     key={`ask-pad-${i}`}
-                    className={`shrink-0 ${tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                    className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
                   />
                 ))}
                 {askRows.map((r) => renderRow(r, 'ask', tk.askPriceClass))}
@@ -503,14 +593,14 @@ export function OrderBookPanel() {
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/50 bg-[#070b12]">
+            <div className="flex min-h-0 flex-col overflow-hidden border border-[#1f2937]/30 bg-[#070b12]">
               {colHeader}
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 {bidRows.map((r) => renderRow(r, 'bid', tk.bidPriceClass))}
                 {Array.from({ length: bidPads }).map((_, i) => (
                   <div
                     key={`bid-pad-${i}`}
-                    className={`shrink-0 ${tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                    className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
                   />
                 ))}
               </div>

@@ -5,6 +5,7 @@ import { createOrderBookUiSlice } from './slices/orderBookUiSlice'
 import { createOrderSlice } from './slices/orderSlice'
 import { createPositionSlice } from './slices/positionSlice'
 import { createSymbolMarketSlice } from './slices/symbolMarketSlice'
+import { createUiPrefsSlice } from './slices/uiPrefsSlice'
 import { createUiRiskSlice } from './slices/uiRiskSlice'
 import type { TradingStore } from './tradingStoreTypes'
 
@@ -19,6 +20,7 @@ export const useTradingStore = create<TradingStore>()((...args) => ({
   ...createUiRiskSlice(...args),
   ...createConditionalOrderSlice(...args),
   ...createOrderBookUiSlice(...args),
+  ...createUiPrefsSlice(...args),
 }))
 
 export const submitMockSpeedOrder = createSubmitMockSpeedOrder(useTradingStore)

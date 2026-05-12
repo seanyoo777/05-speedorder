@@ -34,12 +34,22 @@ export type TradingStoreState = {
   orderBookDoubleClickEnabled: boolean
   /** 일반 주문 지정가 필드에 1회 주입 */
   orderBookPendingLimitPrice: number | null
+  /** MIT·스탑 트리거에 1회 주입(호가 클릭 시 고정, 실시간 시세와 무관) */
+  orderBookPendingTriggerPrice: number | null
   /** 호가 행 선택 강조 (가격) */
   orderBookHighlightPrice: number | null
   /** 호가 디자인 프리셋 (localStorage 동기) */
   orderBookDesignPreset: OrderBookDesignPresetId
   /** 매수/매도 색역 수동 반전 (프리셋 위에 추가 적용) */
   orderBookColorInvert: boolean
+  /** 스피드 주문 패널 등 기본 글자 배율 (localStorage) */
+  uiFontScale: number
+  /** 호가창 숫자·행 글자 배율 (localStorage) */
+  uiOrderBookFontScale: number
+  /** 컴팩트 모드 (localStorage) */
+  uiCompactMode: boolean
+  /** DOM 열 최소 너비(px), null이면 기본 min-w (localStorage) */
+  uiDomWidthPx: number | null
 }
 
 export type TradingStoreActions = {
@@ -70,9 +80,15 @@ export type TradingStoreActions = {
   setOrderBookDoubleClickEnabled: (v: boolean) => void
   setOrderBookPendingLimitPrice: (price: number | null) => void
   clearOrderBookPendingLimitPrice: () => void
+  setOrderBookPendingTriggerPrice: (price: number | null) => void
+  clearOrderBookPendingTriggerPrice: () => void
   setOrderBookHighlightPrice: (price: number | null) => void
   setOrderBookDesignPreset: (id: OrderBookDesignPresetId) => void
   setOrderBookColorInvert: (v: boolean) => void
+  setUiFontScale: (v: number) => void
+  setUiOrderBookFontScale: (v: number) => void
+  setUiCompactMode: (v: boolean) => void
+  setUiDomWidthPx: (v: number | null) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions
