@@ -3,6 +3,8 @@ import type { PositionPanelPresetId, WorkspaceLayoutPresetId } from '../../domai
 import type { TradingWorkspaceSlot } from '../../domain/tradingWorkspace'
 import type { WorkspaceOrderFormTab } from '../../workspace/applyWorkspaceSlot'
 import type { TradingStore } from '../tradingStoreTypes'
+import { recordWorkspaceSyncSkipped } from '../../workspace/workspaceSyncDiagnostics'
+import { workspaceRuntimeMatchesSlot } from '../../workspace/workspaceSyncGuards'
 
 /** Per-workspace UI runtime — isolated per registry store (W3). */
 export const createWorkspaceRuntimeSlice: StateCreator<
@@ -25,9 +27,15 @@ export const createWorkspaceRuntimeSlice: StateCreator<
   setWorkspaceOrderFormTab: (workspaceOrderFormTab) => set({ workspaceOrderFormTab }),
 
   setWorkspaceRuntimeFromSlot: (slot: TradingWorkspaceSlot) =>
-    set({
-      workspaceOrderFormTab: slot.orderFormPreset === 'stop_mit_tab' ? 'stopMit' : 'standard',
-      workspacePositionPanelPreset: slot.positionPanelPreset,
-      workspaceLayoutPreset: slot.layoutPreset,
+    set((s) => {
+      if (workspaceRuntimeMatchesSlot(s, slot)) {
+        recordWorkspaceSyncSkipped('applyWorkspaceSlot')
+        return {}
+      }
+      return {
+        workspaceOrderFormTab: slot.orderFormPreset === 'stop_mit_tab' ? 'stopMit' : 'standard',
+        workspacePositionPanelPreset: slot.positionPanelPreset,
+        workspaceLayoutPreset: slot.layoutPreset,
+      }
     }),
 })

@@ -14,6 +14,7 @@ import type {
 import { parseWorkspaceId } from '../domain/tradingWorkspace'
 import type { TradingStoreState } from '../store/tradingStoreTypes'
 import { bootSpec } from '../store/boot'
+import { useWorkspaceShellStore } from '../store/workspaceShellStore'
 import {
   getActiveWorkspaceId,
   getOrCreateWorkspaceStore,
@@ -130,9 +131,19 @@ export function readAllWorkspaceVendorSnapshots(): readonly TradingWorkspaceVend
   })
 }
 
+function resolveActiveWorkspaceIdForSnapshot(): string {
+  try {
+    const shellId = useWorkspaceShellStore.getState().activeWorkspaceId
+    if (shellId) return shellId
+  } catch {
+    /* store unavailable during isolated import */
+  }
+  return getActiveWorkspaceId()
+}
+
 /** Shell 활성 workspaceId 기준 스냅샷. */
 export function readActiveWorkspaceVendorSnapshot(): TradingWorkspaceVendorSnapshot | null {
-  return readWorkspaceVendorSnapshot(getActiveWorkspaceId())
+  return readWorkspaceVendorSnapshot(resolveActiveWorkspaceIdForSnapshot())
 }
 
 export function countInvalidWorkspaceVendorSnapshots(

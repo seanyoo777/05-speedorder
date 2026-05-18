@@ -15,12 +15,20 @@ export function applyOrderBookPriceIntent(
   spec: SymbolSpec,
   rawPrice: number,
   side: 'ask' | 'bid',
+  current?: {
+    orderBookPendingLimitPrice: number | null
+    orderBookPendingTriggerPrice: number | null
+    orderBookPendingTriggerBookSide: 'bid' | 'ask' | null
+    orderBookHighlightPrice: number | null
+  },
 ): number {
   const p = roundPriceBySpec(spec, rawPrice)
-  setters.setOrderBookPendingLimitPrice(p)
-  setters.setOrderBookPendingTriggerPrice(p)
-  setters.setOrderBookPendingTriggerBookSide(side)
-  setters.setOrderBookHighlightPrice(p)
+  if (current?.orderBookPendingLimitPrice !== p) setters.setOrderBookPendingLimitPrice(p)
+  if (current?.orderBookPendingTriggerPrice !== p) setters.setOrderBookPendingTriggerPrice(p)
+  if (current?.orderBookPendingTriggerBookSide !== side) {
+    setters.setOrderBookPendingTriggerBookSide(side)
+  }
+  if (current?.orderBookHighlightPrice !== p) setters.setOrderBookHighlightPrice(p)
   return p
 }
 

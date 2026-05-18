@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import { getTradingWorkspaceSlot } from '../../domain/tradingWorkspaceCatalog'
 import {
+  getActiveWorkspaceId,
   getOrCreateWorkspaceStore,
   switchActiveWorkspaceStore,
 } from '../workspaceStoreRegistry'
@@ -10,6 +11,11 @@ import {
   resolveWorkspaceId,
   writeWorkspaceIdToUrl,
 } from '../../workspace/tradingWorkspaceUrl'
+import {
+  recordWorkspaceSyncSkipped,
+  recordWorkspaceSyncSource,
+} from '../../workspace/workspaceSyncDiagnostics'
+import { isSameWorkspaceShellMeta } from '../../workspace/workspaceSyncGuards'
 import type { WorkspaceShellStore } from '../workspaceShellTypes'
 
 export const createWorkspaceShellSlice: StateCreator<
@@ -38,6 +44,21 @@ export const createWorkspaceShellSlice: StateCreator<
     const slot = getTradingWorkspaceSlot(resolved.workspaceId)
     if (!slot) return
 
+    const urlRaw = options?.urlRaw !== undefined ? options.urlRaw : readWorkspaceIdFromUrl()
+    const urlInSync = isWorkspaceUrlInSync(resolved.workspaceId)
+    const shellMeta = isSameWorkspaceShellMeta(get(), {
+      workspaceId: resolved.workspaceId,
+      categoryId: slot.categoryId,
+      urlRaw,
+      usedFallback: resolved.usedFallback,
+      urlInSync,
+    })
+    if (shellMeta && getActiveWorkspaceId() === resolved.workspaceId) {
+      recordWorkspaceSyncSkipped('activateWorkspace')
+      return
+    }
+
+    recordWorkspaceSyncSource('activateWorkspace')
     getOrCreateWorkspaceStore(resolved.workspaceId)
     switchActiveWorkspaceStore(resolved.workspaceId)
 
@@ -46,19 +67,37 @@ export const createWorkspaceShellSlice: StateCreator<
       writeWorkspaceIdToUrl(resolved.workspaceId, options?.historyMode ?? 'replace')
     }
 
-    const urlRaw = options?.urlRaw !== undefined ? options.urlRaw : readWorkspaceIdFromUrl()
     set({
       activeWorkspaceId: resolved.workspaceId,
       activeWorkspaceCategoryId: slot.categoryId,
       workspaceUrlQueryRaw: urlRaw,
       workspaceUrlFallbackUsed: resolved.usedFallback,
-      workspaceUrlInSync: isWorkspaceUrlInSync(resolved.workspaceId),
+      workspaceUrlInSync: urlInSync,
     })
   },
 
   initWorkspaceFromUrl: (search) => {
     const urlRaw = readWorkspaceIdFromUrl(search)
     const resolved = resolveWorkspaceId(urlRaw)
+    const slot = getTradingWorkspaceSlot(resolved.workspaceId)
+    if (!slot) return
+
+    const urlInSync = isWorkspaceUrlInSync(resolved.workspaceId)
+    if (
+      isSameWorkspaceShellMeta(get(), {
+        workspaceId: resolved.workspaceId,
+        categoryId: slot.categoryId,
+        urlRaw,
+        usedFallback: resolved.usedFallback,
+        urlInSync,
+      }) &&
+      getActiveWorkspaceId() === resolved.workspaceId
+    ) {
+      recordWorkspaceSyncSkipped('initWorkspaceFromUrl')
+      return
+    }
+
+    recordWorkspaceSyncSource('initWorkspaceFromUrl')
     get().activateWorkspace(resolved.workspaceId, {
       syncUrl: true,
       urlRaw,

@@ -27,6 +27,8 @@ import { getResearchFeedDiagnostics } from '../../research/researchFeedDiagnosti
 import { getOrderBookDiagnostics } from '../orderbook/orderBookDiagnostics'
 import { getOrderFormDiagnostics } from '../orderform/orderFormDiagnostics'
 import { getPositionCloseDiagnostics } from '../position/positionCloseDiagnostics'
+import { getWorkspaceSyncDiagnostics } from '../../workspace/workspaceSyncDiagnostics'
+import { getRightColumnLoopDiagnostics } from '../ordercolumn/rightColumnLoopDiagnostics'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from '../../selftest/types'
 
 type TabId = 'checks' | 'audit' | 'flags' | 'stopmit' | 'workspace'
@@ -152,6 +154,8 @@ export function DiagnosticsPanel() {
     () => getPositionCloseDiagnostics(positionCloseDiagState),
     [positionCloseDiagState],
   )
+  const workspaceSyncDiagnostics = getWorkspaceSyncDiagnostics()
+  const rightColumnLoopDiagnostics = getRightColumnLoopDiagnostics()
   const audit = useMemo(() => {
     void auditTick
     return [...getSelfTestAuditTrail()].reverse()
@@ -319,6 +323,20 @@ export function DiagnosticsPanel() {
                 <span>{activeWorkspaceId}</span>
               </li>
               <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">lastWorkspaceSyncSource</span>
+                <span>{workspaceSyncDiagnostics.lastWorkspaceSyncSource ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">skippedSyncCount</span>
+                <span>{workspaceSyncDiagnostics.skippedSyncCount}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">workspaceLoopGuardTriggered</span>
+                <span className="text-so-bid">
+                  {String(workspaceSyncDiagnostics.workspaceLoopGuardTriggered)}
+                </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
                 <span className="text-so-muted">categoryId</span>
                 <span>{activeWorkspaceCategoryId}</span>
               </li>
@@ -408,6 +426,18 @@ export function DiagnosticsPanel() {
               <li className="flex justify-between px-2 py-1">
                 <span className="text-so-muted">mockCloseOnly</span>
                 <span className="text-so-bid">{String(positionCloseDiagnostics.mockCloseOnly)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">rightColumnLoopSource</span>
+                <span>{rightColumnLoopDiagnostics.rightColumnLoopSource ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">renderLoopCandidate</span>
+                <span>{rightColumnLoopDiagnostics.renderLoopCandidate ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">isolatedPanelName</span>
+                <span>{rightColumnLoopDiagnostics.isolatedPanelName ?? '—'}</span>
               </li>
             </ul>
             {activeVendorSnapshot && (

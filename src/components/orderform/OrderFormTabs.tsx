@@ -1,6 +1,6 @@
 import { useShallow } from 'zustand/react/shallow'
 import { useTradingStore } from '../../store/tradingStore'
-import { buildOrderFormIntentSnapshot } from './orderFormIntentModel'
+import { selectOrderFormIntentInputs, buildOrderFormIntentSnapshot } from './orderFormIntentModel'
 import { useTgxFormRhythm } from './useTgxFormRhythm'
 import type { WorkspaceOrderFormTab } from '../../workspace/applyWorkspaceSlot'
 
@@ -8,7 +8,7 @@ export function OrderFormTabs() {
   const { cx } = useTgxFormRhythm()
   const { tab, setTab, limitHint, triggerHint } = useTradingStore(
     useShallow((s) => {
-      const snap = buildOrderFormIntentSnapshot(s, s.workspaceOrderFormTab)
+      const snap = buildOrderFormIntentSnapshot(selectOrderFormIntentInputs(s), s.workspaceOrderFormTab)
       return {
         tab: s.workspaceOrderFormTab,
         setTab: s.setWorkspaceOrderFormTab,

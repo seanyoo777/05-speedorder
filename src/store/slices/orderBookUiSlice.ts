@@ -80,19 +80,41 @@ export const createOrderBookUiSlice: StateCreator<
 
   setOrderBookDoubleClickEnabled: (orderBookDoubleClickEnabled) => set({ orderBookDoubleClickEnabled }),
 
-  setOrderBookPendingLimitPrice: (orderBookPendingLimitPrice) => set({ orderBookPendingLimitPrice }),
+  setOrderBookPendingLimitPrice: (orderBookPendingLimitPrice) =>
+    set((s) =>
+      s.orderBookPendingLimitPrice === orderBookPendingLimitPrice
+        ? {}
+        : { orderBookPendingLimitPrice },
+    ),
 
-  clearOrderBookPendingLimitPrice: () => set({ orderBookPendingLimitPrice: null }),
+  clearOrderBookPendingLimitPrice: () =>
+    set((s) => (s.orderBookPendingLimitPrice == null ? {} : { orderBookPendingLimitPrice: null })),
 
-  setOrderBookPendingTriggerPrice: (orderBookPendingTriggerPrice) => set({ orderBookPendingTriggerPrice }),
+  setOrderBookPendingTriggerPrice: (orderBookPendingTriggerPrice) =>
+    set((s) =>
+      s.orderBookPendingTriggerPrice === orderBookPendingTriggerPrice
+        ? {}
+        : { orderBookPendingTriggerPrice },
+    ),
 
   setOrderBookPendingTriggerBookSide: (orderBookPendingTriggerBookSide) =>
-    set({ orderBookPendingTriggerBookSide }),
+    set((s) =>
+      s.orderBookPendingTriggerBookSide === orderBookPendingTriggerBookSide
+        ? {}
+        : { orderBookPendingTriggerBookSide },
+    ),
 
   clearOrderBookPendingTriggerPrice: () =>
-    set({ orderBookPendingTriggerPrice: null, orderBookPendingTriggerBookSide: null }),
+    set((s) =>
+      s.orderBookPendingTriggerPrice == null && s.orderBookPendingTriggerBookSide == null
+        ? {}
+        : { orderBookPendingTriggerPrice: null, orderBookPendingTriggerBookSide: null },
+    ),
 
-  setOrderBookHighlightPrice: (orderBookHighlightPrice) => set({ orderBookHighlightPrice }),
+  setOrderBookHighlightPrice: (orderBookHighlightPrice) =>
+    set((s) =>
+      s.orderBookHighlightPrice === orderBookHighlightPrice ? {} : { orderBookHighlightPrice },
+    ),
 
   setOrderBookDesignPreset: (id: OrderBookDesignPresetId) => {
     try {

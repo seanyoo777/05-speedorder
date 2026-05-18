@@ -9,6 +9,17 @@ import type { WorkspaceOrderFormTab } from '../../workspace/applyWorkspaceSlot'
 
 export type OrderFormIntentEmphasis = 'limit' | 'trigger' | 'neutral'
 
+export type OrderFormIntentInputs = {
+  orderBookPendingLimitPrice: number | null
+  orderBookPendingTriggerPrice: number | null
+  orderBookPendingTriggerBookSide: 'bid' | 'ask' | null
+  orderBookHighlightPrice: number | null
+  stopMitLocked: boolean
+  stopMitTriggerPrice: number | null
+  stopMitLockSource: PriceLockSource
+  stopMitLockBookSide: 'bid' | 'ask' | undefined
+}
+
 export type OrderFormIntentSnapshot = {
   limitIntent: number | null
   triggerIntent: number | null
@@ -23,7 +34,7 @@ export type OrderFormIntentSnapshot = {
 
 export type OneClickPolicyLabel = 'disabled_intent_only' | 'enabled_legacy_path'
 
-export function buildOrderFormIntentSnapshot(
+export function selectOrderFormIntentInputs(
   state: Pick<
     TradingStoreState,
     | 'orderBookPendingLimitPrice'
@@ -32,22 +43,54 @@ export function buildOrderFormIntentSnapshot(
     | 'orderBookHighlightPrice'
     | 'stopMitDraft'
   >,
+): OrderFormIntentInputs {
+  const d = state.stopMitDraft
+  return {
+    orderBookPendingLimitPrice: state.orderBookPendingLimitPrice,
+    orderBookPendingTriggerPrice: state.orderBookPendingTriggerPrice,
+    orderBookPendingTriggerBookSide: state.orderBookPendingTriggerBookSide,
+    orderBookHighlightPrice: state.orderBookHighlightPrice,
+    stopMitLocked: d.priceLock.locked,
+    stopMitTriggerPrice: d.triggerPrice,
+    stopMitLockSource: d.priceLock.source,
+    stopMitLockBookSide: d.priceLock.bookSide,
+  }
+}
+
+export function areOrderFormIntentSnapshotsEqual(
+  a: OrderFormIntentSnapshot,
+  b: OrderFormIntentSnapshot,
+): boolean {
+  return (
+    a.limitIntent === b.limitIntent &&
+    a.triggerIntent === b.triggerIntent &&
+    a.triggerBookSide === b.triggerBookSide &&
+    a.stopMitLocked === b.stopMitLocked &&
+    a.stopMitTriggerPrice === b.stopMitTriggerPrice &&
+    a.lockSource === b.lockSource &&
+    a.lockBookSide === b.lockBookSide &&
+    a.emphasis === b.emphasis &&
+    a.hasVisibleIntent === b.hasVisibleIntent
+  )
+}
+
+export function buildOrderFormIntentSnapshot(
+  state: OrderFormIntentInputs,
   tab: WorkspaceOrderFormTab,
 ): OrderFormIntentSnapshot {
-  const { stopMitDraft: d } = state
   const limitIntent =
     state.orderBookPendingLimitPrice ??
     (tab === 'standard' ? state.orderBookHighlightPrice : null)
   const triggerIntent =
     state.orderBookPendingTriggerPrice ??
-    (d.priceLock.locked
-      ? d.triggerPrice
+    (state.stopMitLocked
+      ? state.stopMitTriggerPrice
       : tab === 'stopMit'
         ? state.orderBookHighlightPrice
         : null)
 
-  const stopMitLocked = d.priceLock.locked
-  const stopMitTriggerPrice = d.triggerPrice
+  const stopMitLocked = state.stopMitLocked
+  const stopMitTriggerPrice = state.stopMitTriggerPrice
   const hasVisibleIntent =
     limitIntent != null ||
     triggerIntent != null ||
@@ -70,11 +113,11 @@ export function buildOrderFormIntentSnapshot(
   return {
     limitIntent,
     triggerIntent,
-    triggerBookSide: state.orderBookPendingTriggerBookSide ?? d.priceLock.bookSide ?? null,
+    triggerBookSide: state.orderBookPendingTriggerBookSide ?? state.stopMitLockBookSide ?? null,
     stopMitLocked,
     stopMitTriggerPrice,
-    lockSource: d.priceLock.source,
-    lockBookSide: d.priceLock.bookSide,
+    lockSource: state.stopMitLockSource,
+    lockBookSide: state.stopMitLockBookSide,
     emphasis,
     hasVisibleIntent,
   }

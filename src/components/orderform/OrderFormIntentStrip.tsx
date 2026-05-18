@@ -2,7 +2,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
-import { buildOrderFormIntentSnapshot, resolveOneClickPolicyLabel } from './orderFormIntentModel'
+import { useOrderFormIntentSnapshot } from './useOrderFormIntentSnapshot'
 
 function lockSourceKo(source: string): string {
   if (source === 'orderbook') return '호가'
@@ -16,17 +16,14 @@ type Props = {
 
 export function OrderFormIntentStrip({ tab }: Props) {
   const symbol = useTradingStore((s) => s.symbol)
+  const { snapshot, oneClickPolicy } = useOrderFormIntentSnapshot(tab)
   const {
-    snapshot,
-    oneClickPolicy,
     patchStopMitDraft,
     clearOrderBookPendingLimitPrice,
     clearOrderBookPendingTriggerPrice,
     setOrderBookHighlightPrice,
   } = useTradingStore(
     useShallow((s) => ({
-      snapshot: buildOrderFormIntentSnapshot(s, tab),
-      oneClickPolicy: resolveOneClickPolicyLabel(s.orderBookOneClickEnabled, s.orderBookStyle),
       patchStopMitDraft: s.patchStopMitDraft,
       clearOrderBookPendingLimitPrice: s.clearOrderBookPendingLimitPrice,
       clearOrderBookPendingTriggerPrice: s.clearOrderBookPendingTriggerPrice,

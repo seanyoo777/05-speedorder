@@ -20,6 +20,8 @@ import { runResearchFeedChecks } from './researchFeedChecks'
 import { runTgxOrderBookChecks } from './tgxOrderBookChecks'
 import { runTgxOrderFormChecks } from './tgxOrderFormChecks'
 import { runPositionCloseChecks } from './positionCloseChecks'
+import { runWorkspaceSyncLoopChecks } from './workspaceSyncLoopChecks'
+import { runRightColumnLoopChecks } from './rightColumnLoopChecks'
 import type { TradingStoreView } from '../store/tradingStore'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from './types'
 
@@ -211,6 +213,8 @@ export function runSpeedOrderSelfTest(
     ...runTgxOrderBookChecks(storeRunner),
     ...runTgxOrderFormChecks(storeRunner),
     ...runPositionCloseChecks(storeRunner),
+    ...runWorkspaceSyncLoopChecks(storeRunner),
+    ...runRightColumnLoopChecks(storeRunner),
   ]
 
   if (storeRunner) {

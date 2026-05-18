@@ -20,7 +20,6 @@ export function StopMitOrderPanel() {
   const conditionalOrders = useTradingStore((s) => s.conditionalOrders)
   const stopMitDraft = useTradingStore((s) => s.stopMitDraft)
   const patchStopMitDraft = useTradingStore((s) => s.patchStopMitDraft)
-  const consumeOrderBookPendingTrigger = useTradingStore((s) => s.consumeOrderBookPendingTrigger)
   const registerConditionalOrder = useTradingStore((s) => s.registerConditionalOrder)
   const cancelConditionalOrder = useTradingStore((s) => s.cancelConditionalOrder)
 
@@ -31,16 +30,17 @@ export function StopMitOrderPanel() {
   const { cx } = useTgxFormRhythm()
 
   useEffect(() => {
+    const consumePending = () => useTradingStore.getState().consumeOrderBookPendingTrigger()
     if (useTradingStore.getState().orderBookPendingTriggerPrice != null) {
-      consumeOrderBookPendingTrigger()
+      consumePending()
     }
     return useTradingStore.subscribe((st, prev) => {
       const p = st.orderBookPendingTriggerPrice
       if (p != null && p !== prev.orderBookPendingTriggerPrice) {
-        st.consumeOrderBookPendingTrigger()
+        consumePending()
       }
     })
-  }, [consumeOrderBookPendingTrigger])
+  }, [])
 
   const triggerInputValue = triggerPrice != null ? String(triggerPrice) : ''
 

@@ -23,6 +23,10 @@ export type SpeedOrderFeatureFlags = {
    * Host alias: `speedorder.enableTgxOrderBook`
    */
   readonly enableTgxOrderBook: boolean
+  /** RightOrderColumn isolate — set true to disable panel (debug render loops). */
+  readonly disableRightColumnTgxOrderBook: boolean
+  readonly disableRightColumnIntentStrip: boolean
+  readonly disableRightColumnResearchFeed: boolean
 }
 
 export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
@@ -36,6 +40,9 @@ export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
   stopMitPriceLockEnabled: true,
   enableResearchFeedPanel: true,
   enableTgxOrderBook: true,
+  disableRightColumnTgxOrderBook: false,
+  disableRightColumnIntentStrip: false,
+  disableRightColumnResearchFeed: false,
 } as const
 
 export type FeatureFlagValidation = {

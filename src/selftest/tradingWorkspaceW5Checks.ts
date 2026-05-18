@@ -10,8 +10,10 @@ import {
   applyTradingWorkspaceHostBootstrap,
   assertTradingWorkspaceHostMockOnly,
   notifyTradingWorkspaceHostChange,
+  resetTradingWorkspaceHostBootstrapGuard,
   TRADING_WORKSPACE_HOST_EXPORT_SYMBOLS,
 } from '../workspace/tradingWorkspaceHostRuntime'
+import { resetWorkspaceSyncDiagnostics } from '../workspace/workspaceSyncDiagnostics'
 import * as workspaceHostIndex from '../workspace/index'
 import type { SelfTestCheckResult, SelfTestStatus } from './types'
 
@@ -33,6 +35,8 @@ function runCheck(
 }
 
 function resetForHostTest(): void {
+  resetWorkspaceSyncDiagnostics()
+  resetTradingWorkspaceHostBootstrapGuard()
   clearWorkspaceStoreRegistry()
   useWorkspaceShellStore.getState().activateWorkspace(DEFAULT_WORKSPACE_ID, { syncUrl: false })
 }

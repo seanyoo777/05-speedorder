@@ -2,6 +2,7 @@ import type { WorkspaceOrderFormTab } from '../../workspace/applyWorkspaceSlot'
 import {
   buildOrderFormIntentSnapshot,
   resolveOneClickPolicyLabel,
+  selectOrderFormIntentInputs,
   type OneClickPolicyLabel,
 } from './orderFormIntentModel'
 import { resolveTgxFormRhythmId, type TgxFormRhythmId } from './tgxFormRhythm'
@@ -28,7 +29,10 @@ export function getOrderFormDiagnostics(
     | 'workspaceOrderFormTab'
   >,
 ): OrderFormDiagnostics {
-  const intent = buildOrderFormIntentSnapshot(state, state.workspaceOrderFormTab)
+  const intent = buildOrderFormIntentSnapshot(
+    selectOrderFormIntentInputs(state),
+    state.workspaceOrderFormTab,
+  )
   return {
     orderFormIntentVisible: intent.hasVisibleIntent,
     stopMitLockVisible: state.stopMitDraft.priceLock.locked,

@@ -7,6 +7,10 @@ import { bootLast, bootOrderBook, bootSpec, initialTickers } from '../boot'
 import type { TradingStore } from '../tradingStoreTypes'
 import { getSymbolSpec } from '../../symbols/registry'
 import { buildOrderBook } from '../../mock/mockData'
+import {
+  recordWorkspaceSyncSkipped,
+  recordWorkspaceSyncSource,
+} from '../../workspace/workspaceSyncDiagnostics'
 
 export const createSymbolMarketSlice: StateCreator<
   TradingStore,
@@ -34,6 +38,11 @@ export const createSymbolMarketSlice: StateCreator<
   setSymbol: (symbol) => {
     const spec = getSymbolSpec(symbol)
     const sym = spec.symbol
+    if (get().symbol === sym) {
+      recordWorkspaceSyncSkipped('setSymbol')
+      return
+    }
+    recordWorkspaceSyncSource('setSymbol')
     const row = get().tickers.find((t) => t.symbol === sym)
     const lpRaw = row?.price ?? spec.referencePrice
     const lastPrice = Number.isFinite(lpRaw) && lpRaw > 0 ? lpRaw : spec.referencePrice

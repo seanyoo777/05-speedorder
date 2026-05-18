@@ -2,6 +2,7 @@ import { OrderFormIntentStrip } from '../components/orderform/OrderFormIntentStr
 import {
   buildOrderFormIntentSnapshot,
   resolveOneClickPolicyLabel,
+  selectOrderFormIntentInputs,
 } from '../components/orderform/orderFormIntentModel'
 import { getOrderFormDiagnostics } from '../components/orderform/orderFormDiagnostics'
 import { ORDER_EXECUTION_POLICY } from '../vendor/orderExecutionPolicy'
@@ -47,15 +48,6 @@ function withStoreRestore<T>(store: StoreApi, run: () => T): T {
   }
 }
 
-const emptyDraft = {
-  symbol: 'BTCUSDT',
-  kind: 'MIT' as const,
-  side: 'buy' as const,
-  triggerPrice: null,
-  quantity: 0.05,
-  priceLock: { locked: false, price: null, source: 'none' as const, lockedAt: null },
-}
-
 export function runTgxOrderFormChecks(store?: StoreApi): SelfTestCheckResult[] {
   return [
     runCheck('tgx-orderform-intent-strip', 'Order form intent strip model', () => {
@@ -68,7 +60,10 @@ export function runTgxOrderFormChecks(store?: StoreApi): SelfTestCheckResult[] {
           orderBookPendingTriggerPrice: null,
           orderBookPendingTriggerBookSide: null,
           orderBookHighlightPrice: 100,
-          stopMitDraft: emptyDraft,
+          stopMitLocked: false,
+          stopMitTriggerPrice: null,
+          stopMitLockSource: 'none',
+          stopMitLockBookSide: undefined,
         },
         'standard',
       )
@@ -80,7 +75,14 @@ export function runTgxOrderFormChecks(store?: StoreApi): SelfTestCheckResult[] {
         orderBookPendingTriggerPrice: null,
         orderBookPendingTriggerBookSide: null,
         orderBookHighlightPrice: 100,
-        stopMitDraft: emptyDraft,
+        stopMitDraft: {
+          symbol: 'BTCUSDT',
+          kind: 'MIT',
+          side: 'buy',
+          triggerPrice: null,
+          quantity: 0.05,
+          priceLock: { locked: false, price: null, source: 'none', lockedAt: null },
+        },
         orderBookOneClickEnabled: false,
         orderBookStyle: 'tgx_style',
         orderBookRowDensity: 'dense',
@@ -102,7 +104,7 @@ export function runTgxOrderFormChecks(store?: StoreApi): SelfTestCheckResult[] {
       return withStoreRestore(store, () => {
         store.getState().patchStopMitDraft({ op: 'lockFromBook', price: 42_000, bookSide: 'ask' })
         store.getState().setWorkspaceOrderFormTab('stopMit')
-        const snap = buildOrderFormIntentSnapshot(store.getState(), 'stopMit')
+        const snap = buildOrderFormIntentSnapshot(selectOrderFormIntentInputs(store.getState()), 'stopMit')
         const diag = getOrderFormDiagnostics(store.getState())
         if (!snap.stopMitLocked || snap.emphasis !== 'trigger') {
           return { status: 'fail', message: `lock=${snap.stopMitLocked} emphasis=${snap.emphasis}` }

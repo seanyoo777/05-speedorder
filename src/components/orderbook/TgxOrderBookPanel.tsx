@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { displayRowCountForDensity } from '../../config/orderBookStyle'
 import { getSymbolSpec } from '../../symbols/registry'
@@ -32,8 +32,12 @@ export function TgxOrderBookPanel() {
     orderBookOrderQty,
     orderBookDoubleClickEnabled,
     orderBookHighlightPrice,
+    orderBookPendingLimitPrice,
+    orderBookPendingTriggerPrice,
+    orderBookPendingTriggerBookSide,
     orderBookRowDensity,
-    stopMitDraft,
+    stopMitLockLocked,
+    stopMitTriggerPrice,
     setOrderBookOrderQty,
     setOrderBookPendingLimitPrice,
     setOrderBookPendingTriggerPrice,
@@ -47,8 +51,12 @@ export function TgxOrderBookPanel() {
       orderBookOrderQty: s.orderBookOrderQty,
       orderBookDoubleClickEnabled: s.orderBookDoubleClickEnabled,
       orderBookHighlightPrice: s.orderBookHighlightPrice,
+      orderBookPendingLimitPrice: s.orderBookPendingLimitPrice,
+      orderBookPendingTriggerPrice: s.orderBookPendingTriggerPrice,
+      orderBookPendingTriggerBookSide: s.orderBookPendingTriggerBookSide,
       orderBookRowDensity: s.orderBookRowDensity,
-      stopMitDraft: s.stopMitDraft,
+      stopMitLockLocked: s.stopMitDraft.priceLock.locked,
+      stopMitTriggerPrice: s.stopMitDraft.triggerPrice,
       setOrderBookOrderQty: s.setOrderBookOrderQty,
       setOrderBookPendingLimitPrice: s.setOrderBookPendingLimitPrice,
       setOrderBookPendingTriggerPrice: s.setOrderBookPendingTriggerPrice,
@@ -63,9 +71,7 @@ export function TgxOrderBookPanel() {
   const tokens = tgxOrderBookTokens(orderBookRowDensity)
   const rowCount = displayRowCountForDensity(orderBookRowDensity)
   const lockedTriggerPrice =
-    stopMitDraft.priceLock.locked && stopMitDraft.triggerPrice != null
-      ? stopMitDraft.triggerPrice
-      : null
+    stopMitLockLocked && stopMitTriggerPrice != null ? stopMitTriggerPrice : null
 
   const [hoverRowKey, setHoverRowKey] = useState<string | null>(null)
   const [centerFlash, setCenterFlash] = useState<'up' | 'down' | null>(null)
@@ -86,7 +92,7 @@ export function TgxOrderBookPanel() {
     const prev = symChanged ? null : prevLastRef.current
     const d =
       prev != null && Number.isFinite(prev) ? (lpN > prev ? 1 : lpN < prev ? -1 : 0) : 0
-    setCenterDir(d)
+    setCenterDir((prev) => (prev === d ? prev : d))
     prevLastRef.current = lpN
   }, [lastPrice, spec.referencePrice, symbol])
 
@@ -114,10 +120,11 @@ export function TgxOrderBookPanel() {
         centerFlashTimerRef.current = null
       }
       if (centerDir === 0) {
-        setCenterFlash(null)
+        setCenterFlash((prev) => (prev === null ? prev : null))
         return
       }
-      setCenterFlash(centerDir > 0 ? 'up' : 'down')
+      const next = centerDir > 0 ? 'up' : 'down'
+      setCenterFlash((prev) => (prev === next ? prev : next))
       centerFlashTimerRef.current = window.setTimeout(() => {
         setCenterFlash(null)
         centerFlashTimerRef.current = null
@@ -133,12 +140,35 @@ export function TgxOrderBookPanel() {
     }
   }, [centerDir])
 
-  const intentSetters = {
-    setOrderBookPendingLimitPrice,
-    setOrderBookPendingTriggerPrice,
-    setOrderBookPendingTriggerBookSide,
-    setOrderBookHighlightPrice,
-  }
+  const intentSetters = useMemo(
+    () => ({
+      setOrderBookPendingLimitPrice,
+      setOrderBookPendingTriggerPrice,
+      setOrderBookPendingTriggerBookSide,
+      setOrderBookHighlightPrice,
+    }),
+    [
+      setOrderBookPendingLimitPrice,
+      setOrderBookPendingTriggerPrice,
+      setOrderBookPendingTriggerBookSide,
+      setOrderBookHighlightPrice,
+    ],
+  )
+
+  const bookIntentCurrent = useMemo(
+    () => ({
+      orderBookPendingLimitPrice,
+      orderBookPendingTriggerPrice,
+      orderBookPendingTriggerBookSide,
+      orderBookHighlightPrice,
+    }),
+    [
+      orderBookPendingLimitPrice,
+      orderBookPendingTriggerPrice,
+      orderBookPendingTriggerBookSide,
+      orderBookHighlightPrice,
+    ],
+  )
 
   const armHighlightClear = useCallback(
     (roundedPrice: number) => {
@@ -160,8 +190,14 @@ export function TgxOrderBookPanel() {
     [setOrderBookHighlightPrice, spec.tickSize],
   )
 
-  const askRows = sliceAskRows(buildAskRows(orderBook.asks), rowCount)
-  const bidRows = sliceBidRows(buildBidRows(orderBook.bids), rowCount)
+  const askRows = useMemo(
+    () => sliceAskRows(buildAskRows(orderBook.asks), rowCount),
+    [orderBook.asks, rowCount],
+  )
+  const bidRows = useMemo(
+    () => sliceBidRows(buildBidRows(orderBook.bids), rowCount),
+    [orderBook.bids, rowCount],
+  )
 
   const lp = safeNumber(lastPrice, spec.referencePrice)
   const maxCum = Math.max(
@@ -194,12 +230,12 @@ export function TgxOrderBookPanel() {
     centerDir > 0 ? 'text-emerald-300' : centerDir < 0 ? 'text-rose-300' : 'text-zinc-50'
 
   const handlePriceClick = (rawPrice: number, side: 'ask' | 'bid') => {
-    const p = applyOrderBookPriceIntent(intentSetters, spec, rawPrice, side)
+    const p = applyOrderBookPriceIntent(intentSetters, spec, rawPrice, side, bookIntentCurrent)
     armHighlightClear(p)
   }
 
   const handlePriceDoubleClick = (rawPrice: number, side: 'ask' | 'bid') => {
-    const p = applyOrderBookPriceIntent(intentSetters, spec, rawPrice, side)
+    const p = applyOrderBookPriceIntent(intentSetters, spec, rawPrice, side, bookIntentCurrent)
     armHighlightClear(p)
     if (!orderBookDoubleClickEnabled) return
     setPendingBookOrderConfirm({

@@ -38,7 +38,12 @@ export function TradingWorkspaceHostProvider({
     onChangeRef.current = onWorkspaceChange
   }, [onWorkspaceChange])
 
+  const bootstrapKeyRef = useRef<string | null>(null)
+
   useEffect(() => {
+    const key = `${enableUrlSync ? 'url' : 'static'}:${initialWorkspaceId ?? ''}`
+    if (bootstrapKeyRef.current === key) return
+    bootstrapKeyRef.current = key
     applyTradingWorkspaceHostBootstrap({ initialWorkspaceId, enableUrlSync, mockOnly: true })
     if (onChangeRef.current) {
       notifyTradingWorkspaceHostChange(onChangeRef.current)

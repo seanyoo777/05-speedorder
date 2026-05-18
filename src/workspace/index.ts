@@ -14,8 +14,14 @@ export {
   applyTradingWorkspaceHostBootstrap,
   assertTradingWorkspaceHostMockOnly,
   notifyTradingWorkspaceHostChange,
+  resetTradingWorkspaceHostBootstrapGuard,
   TRADING_WORKSPACE_HOST_EXPORT_SYMBOLS,
 } from './tradingWorkspaceHostRuntime'
+export {
+  getWorkspaceSyncDiagnostics,
+  resetWorkspaceSyncDiagnostics,
+} from './workspaceSyncDiagnostics'
+export type { WorkspaceSyncSource } from './workspaceSyncDiagnostics'
 export { applyWorkspaceSlotToStore, orderFormPresetToTab } from './applyWorkspaceSlot'
 export type { WorkspaceOrderFormTab } from './applyWorkspaceSlot'
 export {
