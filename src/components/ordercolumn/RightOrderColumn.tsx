@@ -1,6 +1,7 @@
 import { OrderBookPanel } from '../orderbook/OrderBookPanel'
 import { SpeedOrderPanel } from '../speedorder/SpeedOrderPanel'
 import { StopMitOrderPanel } from '../stopmit/StopMitOrderPanel'
+import { ResearchFeedPanel } from '../research/ResearchFeedPanel'
 import { useTradingStore } from '../../store/tradingStore'
 
 export function RightOrderColumn() {
@@ -33,6 +34,7 @@ export function RightOrderColumn() {
       <div className="min-h-0 flex-1 overflow-auto">
         {tab === 'standard' ? <SpeedOrderPanel /> : <StopMitOrderPanel />}
       </div>
+      <ResearchFeedPanel />
     </div>
   )
 }

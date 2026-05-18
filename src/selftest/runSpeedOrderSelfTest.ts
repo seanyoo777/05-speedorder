@@ -16,6 +16,7 @@ import { runTradingWorkspaceW2Checks } from './tradingWorkspaceW2Checks'
 import { runTradingWorkspaceW3Checks } from './tradingWorkspaceW3Checks'
 import { runTradingWorkspaceW4Checks } from './tradingWorkspaceW4Checks'
 import { runTradingWorkspaceW5Checks } from './tradingWorkspaceW5Checks'
+import { runResearchFeedChecks } from './researchFeedChecks'
 import type { TradingStoreView } from '../store/tradingStore'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from './types'
 
@@ -203,6 +204,7 @@ export function runSpeedOrderSelfTest(
     checkSymbolRegistry(),
     ...runTradingWorkspaceChecks(),
     ...runTradingWorkspaceW5Checks(),
+    ...runResearchFeedChecks(),
   ]
 
   if (storeRunner) {

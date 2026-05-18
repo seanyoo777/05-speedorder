@@ -13,6 +13,11 @@ export type SpeedOrderFeatureFlags = {
   readonly liveWebSocketRequired: boolean
   /** Phase 1 — Stop/MIT trigger price lock from order book */
   readonly stopMitPriceLockEnabled: boolean
+  /**
+   * Lightweight 03-OneAI Signal Research Feed panel (mock adapter).
+   * Host config alias: `speedorder.enableResearchFeedPanel`
+   */
+  readonly enableResearchFeedPanel: boolean
 }
 
 export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
@@ -24,6 +29,7 @@ export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
   liveTrading: false,
   liveWebSocketRequired: false,
   stopMitPriceLockEnabled: true,
+  enableResearchFeedPanel: true,
 } as const
 
 export type FeatureFlagValidation = {

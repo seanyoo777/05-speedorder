@@ -22,6 +22,7 @@ import {
   listTradingWorkspaceSlots,
   validateTradingWorkspaceCatalog,
 } from '../../domain/tradingWorkspaceCatalog'
+import { getResearchFeedDiagnostics } from '../../research/researchFeedDiagnostics'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from '../../selftest/types'
 
 type TabId = 'checks' | 'audit' | 'flags' | 'stopmit' | 'workspace'
@@ -110,6 +111,10 @@ export function DiagnosticsPanel() {
   const allVendorSnapshots = readAllWorkspaceVendorSnapshots()
   const activeVendorSnapshot = readActiveWorkspaceVendorSnapshot()
   const stopMitDraft = useTradingStore((s) => s.stopMitDraft)
+  const researchFeedDiagnostics = useMemo(
+    () => getResearchFeedDiagnostics(activeStoreSymbol),
+    [activeStoreSymbol],
+  )
   const audit = useMemo(() => {
     void auditTick
     return [...getSelfTestAuditTrail()].reverse()
@@ -300,6 +305,20 @@ export function DiagnosticsPanel() {
                 <span className="text-so-muted">mockOnly</span>
                 <span className="text-so-bid">
                   {activeVendorSnapshot?.mockOnly === true ? 'true' : '—'}
+                </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">researchFeedPanelEnabled</span>
+                <span>{String(researchFeedDiagnostics.researchFeedPanelEnabled)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">researchFeedItemCount</span>
+                <span>{researchFeedDiagnostics.researchFeedItemCount}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">researchFeedMockOnly</span>
+                <span className="text-so-bid">
+                  {String(researchFeedDiagnostics.researchFeedMockOnly)}
                 </span>
               </li>
             </ul>
