@@ -6,8 +6,9 @@ import {
   DEFAULT_WORKSPACE_ID,
   resolveWorkspaceId,
 } from '../workspace/tradingWorkspaceUrl'
-import type { TradingStore } from '../store/tradingStoreTypes'
+import { evictWorkspaceStore } from '../store/workspaceStoreRegistry'
 import type { SelfTestCheckResult, SelfTestStatus } from './types'
+import type { SelfTestStoreRunner } from './runSpeedOrderSelfTest'
 
 function runCheck(
   id: string,
@@ -26,14 +27,7 @@ function runCheck(
   }
 }
 
-type StoreApi = {
-  getState: () => TradingStore
-  setState: (
-    partial: Partial<TradingStore> | ((s: TradingStore) => Partial<TradingStore>),
-  ) => void
-}
-
-function withStoreRestore<T>(store: StoreApi, run: () => T): T {
+function withStoreRestore<T>(store: SelfTestStoreRunner, run: () => T): T {
   const snapId = store.getState().activeWorkspaceId
   try {
     return run()
@@ -42,7 +36,7 @@ function withStoreRestore<T>(store: StoreApi, run: () => T): T {
   }
 }
 
-export function runTradingWorkspaceW2Checks(store: StoreApi): SelfTestCheckResult[] {
+export function runTradingWorkspaceW2Checks(store: SelfTestStoreRunner): SelfTestCheckResult[] {
   return [
     runCheck('workspace-url-fallback', 'Workspace URL fallback', () => {
       const r = resolveWorkspaceId('not-a-real-workspace')
@@ -86,6 +80,7 @@ export function runTradingWorkspaceW2Checks(store: StoreApi): SelfTestCheckResul
 
     runCheck('workspace-symbol-seed', 'Workspace symbol seed', () => {
       return withStoreRestore(store, () => {
+        evictWorkspaceStore('crypto:1')
         store.getState().activateWorkspace('crypto:1', { syncUrl: false })
         if (store.getState().symbol !== 'BTCUSDT') {
           return {

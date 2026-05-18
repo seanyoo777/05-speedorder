@@ -1,62 +1,45 @@
 import type { StateCreator } from 'zustand'
 import { getTradingWorkspaceSlot } from '../../domain/tradingWorkspaceCatalog'
-import type { PositionPanelPresetId, WorkspaceLayoutPresetId } from '../../domain/tradingWorkspace'
-import { applyWorkspaceSlotToStore } from '../../workspace/applyWorkspaceSlot'
+import {
+  getOrCreateWorkspaceStore,
+  switchActiveWorkspaceStore,
+} from '../workspaceStoreRegistry'
 import {
   isWorkspaceUrlInSync,
   readWorkspaceIdFromUrl,
   resolveWorkspaceId,
   writeWorkspaceIdToUrl,
 } from '../../workspace/tradingWorkspaceUrl'
-import type { WorkspaceOrderFormTab } from '../../workspace/applyWorkspaceSlot'
-import type { TradingStore } from '../tradingStoreTypes'
+import type { WorkspaceShellStore } from '../workspaceShellTypes'
 
-export const createWorkspaceUiSlice: StateCreator<
-  TradingStore,
+export const createWorkspaceShellSlice: StateCreator<
+  WorkspaceShellStore,
   [],
   [],
   Pick<
-    TradingStore,
+    WorkspaceShellStore,
     | 'activeWorkspaceId'
     | 'activeWorkspaceCategoryId'
-    | 'workspaceOrderFormTab'
-    | 'workspacePositionPanelPreset'
-    | 'workspaceLayoutPreset'
     | 'workspaceUrlQueryRaw'
     | 'workspaceUrlFallbackUsed'
     | 'workspaceUrlInSync'
-    | 'setWorkspaceOrderFormTab'
-    | 'setWorkspaceRuntimeFromSlot'
     | 'activateWorkspace'
     | 'initWorkspaceFromUrl'
   >
 > = (set, get) => ({
   activeWorkspaceId: 'domestic_futures:1',
   activeWorkspaceCategoryId: 'domestic_futures',
-  workspaceOrderFormTab: 'stopMit' as WorkspaceOrderFormTab,
-  workspacePositionPanelPreset: 'category_filtered' as PositionPanelPresetId,
-  workspaceLayoutPreset: 'hts_standard' as WorkspaceLayoutPresetId,
   workspaceUrlQueryRaw: null as string | null,
   workspaceUrlFallbackUsed: false,
   workspaceUrlInSync: true,
-
-  setWorkspaceOrderFormTab: (workspaceOrderFormTab) => set({ workspaceOrderFormTab }),
-
-  setWorkspaceRuntimeFromSlot: (slot) =>
-    set({
-      activeWorkspaceId: slot.workspaceId,
-      activeWorkspaceCategoryId: slot.categoryId,
-      workspaceOrderFormTab: slot.orderFormPreset === 'stop_mit_tab' ? 'stopMit' : 'standard',
-      workspacePositionPanelPreset: slot.positionPanelPreset,
-      workspaceLayoutPreset: slot.layoutPreset,
-    }),
 
   activateWorkspace: (workspaceId, options) => {
     const resolved = resolveWorkspaceId(workspaceId)
     const slot = getTradingWorkspaceSlot(resolved.workspaceId)
     if (!slot) return
 
-    applyWorkspaceSlotToStore(get(), slot)
+    getOrCreateWorkspaceStore(resolved.workspaceId)
+    switchActiveWorkspaceStore(resolved.workspaceId)
 
     const syncUrl = options?.syncUrl !== false
     if (syncUrl && typeof window !== 'undefined') {
@@ -65,6 +48,8 @@ export const createWorkspaceUiSlice: StateCreator<
 
     const urlRaw = options?.urlRaw !== undefined ? options.urlRaw : readWorkspaceIdFromUrl()
     set({
+      activeWorkspaceId: resolved.workspaceId,
+      activeWorkspaceCategoryId: slot.categoryId,
       workspaceUrlQueryRaw: urlRaw,
       workspaceUrlFallbackUsed: resolved.usedFallback,
       workspaceUrlInSync: isWorkspaceUrlInSync(resolved.workspaceId),

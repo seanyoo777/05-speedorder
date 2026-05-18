@@ -11,7 +11,7 @@ import type { OrderSide } from '../../types/trading'
 import { formatByDecimals } from '../../utils/format'
 import { safeArray, safeNumber } from '../../utils/safe'
 import { getSymbolSpec } from '../../symbols/registry'
-import { useTradingStore } from '../../store/tradingStore'
+import { tradingStoreApi, useTradingStore } from '../../store/tradingStore'
 import { executeImmediateMockMarketOrder } from '../../engine/immediateMarketFill'
 import { roundPriceBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
@@ -283,7 +283,7 @@ export function OrderBookPanel() {
   const runImmediate = (side: 'ask' | 'bid', rowPrice: number) => {
     if (!confirmIfNeeded()) return
     const orderSide = side === 'ask' ? 'buy' : 'sell'
-    const ok = executeImmediateMockMarketOrder(useTradingStore, {
+    const ok = executeImmediateMockMarketOrder(tradingStoreApi, {
       side: orderSide,
       quantity: orderBookOrderQty,
     })

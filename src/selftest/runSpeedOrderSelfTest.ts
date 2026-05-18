@@ -4,7 +4,7 @@ import { MARKET_SYNC_ACTIONS } from '../vendor/marketSyncCatalog'
 import { readSpeedOrderVendorSerializableSnapshot } from '../vendor/readSpeedOrderVendorSnapshot'
 import { STANDARD_SYMBOLS, getSymbolSpec, isListedSymbol } from '../symbols/registry'
 import { roundToLotSize, roundToTickSize } from '../utils/rounding'
-import type { TradingStore, TradingStoreState } from '../store/tradingStoreTypes'
+import type { TradingStoreState } from '../store/tradingStoreTypes'
 import { validateSpeedOrderFeatureFlags } from './featureFlags'
 import { appendSelfTestAudit } from './auditTrail'
 import {
@@ -13,6 +13,10 @@ import {
 import { runStopMitDraftChecks } from './stopMitDraftChecks'
 import { runTradingWorkspaceChecks } from './tradingWorkspaceChecks'
 import { runTradingWorkspaceW2Checks } from './tradingWorkspaceW2Checks'
+import { runTradingWorkspaceW3Checks } from './tradingWorkspaceW3Checks'
+import { runTradingWorkspaceW4Checks } from './tradingWorkspaceW4Checks'
+import { runTradingWorkspaceW5Checks } from './tradingWorkspaceW5Checks'
+import type { TradingStoreView } from '../store/tradingStore'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from './types'
 
 export type SelfTestRunOptions = {
@@ -174,9 +178,11 @@ const CRITICAL_IDS = new Set([
  * Pass optional store state; omit to validate static contracts only.
  */
 export type SelfTestStoreRunner = {
-  getState: () => TradingStore
+  getState: () => TradingStoreView
   setState: (
-    partial: Partial<TradingStore> | ((s: TradingStore) => Partial<TradingStore>),
+    partial:
+      | Partial<TradingStoreView>
+      | ((s: TradingStoreView) => Partial<TradingStoreView>),
   ) => void
 }
 
@@ -196,10 +202,13 @@ export function runSpeedOrderSelfTest(
     checkEngineExports(),
     checkSymbolRegistry(),
     ...runTradingWorkspaceChecks(),
+    ...runTradingWorkspaceW5Checks(),
   ]
 
   if (storeRunner) {
     results.push(...runTradingWorkspaceW2Checks(storeRunner))
+    results.push(...runTradingWorkspaceW3Checks(storeRunner))
+    results.push(...runTradingWorkspaceW4Checks(storeRunner))
   }
 
   if (state) {

@@ -4,7 +4,7 @@ import type { OrderSide } from '../../types/trading'
 import { speedOrderUxFeedback } from '../../feedback/speedOrderUxFeedback'
 import { STANDARD_SYMBOLS, getSymbolSpec } from '../../symbols/registry'
 import { selectSpeedOrderShell } from '../../store/selectors'
-import { submitMockSpeedOrder, useTradingStore } from '../../store/tradingStore'
+import { submitMockSpeedOrder, tradingStoreApi, useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
 import { estimateInitialMarginUsdt } from '../../utils/margin'
 import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
@@ -99,7 +99,7 @@ export function SpeedOrderPanel() {
     if (pendingSide == null) return
     const q = roundQtyBySpec(spec, Number(qty))
     if (!Number.isFinite(q) || q <= 0) {
-      speedOrderUxFeedback(useTradingStore, 'skip_qty', '수량 오류')
+      speedOrderUxFeedback(tradingStoreApi, 'skip_qty', '수량 오류')
       setModalOpen(false)
       setPendingSide(null)
       return
@@ -117,12 +117,12 @@ export function SpeedOrderPanel() {
 
   const requestSubmit = (side: OrderSide) => {
     if (busy) {
-      speedOrderUxFeedback(useTradingStore, 'skip_busy', '주문 진행 중')
+      speedOrderUxFeedback(tradingStoreApi, 'skip_busy', '주문 진행 중')
       return
     }
     const q = roundQtyBySpec(spec, Number(qty))
     if (!Number.isFinite(q) || q <= 0) {
-      speedOrderUxFeedback(useTradingStore, 'skip_qty', '수량 오류')
+      speedOrderUxFeedback(tradingStoreApi, 'skip_qty', '수량 오류')
       return
     }
     if (confirmOrders) {

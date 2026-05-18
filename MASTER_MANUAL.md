@@ -13,10 +13,11 @@ Single entry point for operators and host integrators (TGX-CEX, UTE, MockInvest)
 
 | Purpose | Path | Notes |
 |---------|------|--------|
-| Vendor policy + UTE-readable snapshot | `src/vendor` | `ORDER_EXECUTION_POLICY`, `readSpeedOrderVendorSerializableSnapshot`, `getSpeedOrderVendorBundle`, `speedOrderSymbolRegistry`, `MARKET_SYNC_ACTIONS` |
+| Vendor policy + UTE-readable snapshot | `src/vendor` | `ORDER_EXECUTION_POLICY`, `readSpeedOrderVendorSerializableSnapshot`, `readWorkspaceVendorSnapshot`, `readAllWorkspaceVendorSnapshots`, `readActiveWorkspaceVendorSnapshot`, `getSpeedOrderVendorBundle`, `speedOrderSymbolRegistry`, `MARKET_SYNC_ACTIONS` |
 | Order engine barrel | `src/engine` | Re-exports `mockExecutionEngine`, `submitMockSpeedOrder`, `immediateMarketFill`, `conditionalOrderRunner` |
 | Symbol registry barrel | `src/symbols` | `SYMBOL_REGISTRY`, `STANDARD_SYMBOLS`, `getSymbolSpec`, `isListedSymbol` |
 | Composed store + submit | `src/store/tradingStore` | `useTradingStore`, `submitMockSpeedOrder`, re-exports of selected vendor helpers |
+| Workspace host embed | `src/workspace` | `TradingWorkspaceHost`, vendor snapshot readers, URL helpers |
 | Domain types + risk helpers | `src/domain` | Shared DTOs; see `domain/index.ts` |
 
 **Do not** import other monorepo apps via relative paths (for example `../02-TGX-CEX/...`). Consume **05-SpeedOrder** as a package or workspace dependency only.
@@ -52,12 +53,14 @@ See [docs/TGX_INTEGRATION.md](docs/TGX_INTEGRATION.md).
 | [docs/TGX_INTEGRATION.md](docs/TGX_INTEGRATION.md) | Embedding steps and import discipline |
 | [docs/HTS_ENGINE_STRUCTURE.md](docs/HTS_ENGINE_STRUCTURE.md) | HTS UX vs engine separation |
 | [docs/SELF_TEST.md](docs/SELF_TEST.md) | Self-Test Center, diagnostics, audit trail, smoke |
-| [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) | Workspace catalog (**W1**) + Launcher/URL/presets (**W2**) |
+| [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) | Workspace W1–W5: catalog, Launcher, per-slot store, vendor snapshot, **`TradingWorkspaceHost`** embed |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full stack and folder map |
 
 ## Changelog (vendor reuse prep)
 
 - Added **`src/vendor/`** — execution policy, engine status, market sync catalog, symbol registry API, serializable snapshot reader.
+- **W4** — `readWorkspaceVendorSnapshot` / `readAllWorkspaceVendorSnapshots` / `readActiveWorkspaceVendorSnapshot` (`TradingWorkspaceVendorSnapshot`).
+- **W5** — `src/workspace` — `TradingWorkspaceHost`, `TradingWorkspaceHostProvider`, `TradingWorkspaceHostView`, `src/workspace/index.ts` barrel.
 - Added **`src/engine/index.ts`** — single barrel for engine exports.
 - Added **`src/symbols/index.ts`** — registry barrel.
 - Extended **`src/store/mockExecution.ts`** — re-exports `executeHedgeSpeedFill`, `executeSpeedOrderFill`, `positionRowIdHedge`, `SpeedFillPositionMode` (legacy path preserved).

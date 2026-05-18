@@ -19,6 +19,7 @@ describe('tradingWorkspace catalog', () => {
   it('getTradingWorkspaceSlot resolves crypto:1', () => {
     const slot = getTradingWorkspaceSlot('crypto:1')
     expect(slot?.displayName).toBe('코인 1번 거래창')
+    expect(slot?.slotIndex).toBe(1)
     expect(slot?.mockOnly).toBe(true)
   })
 

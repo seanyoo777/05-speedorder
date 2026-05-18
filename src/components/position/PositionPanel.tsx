@@ -3,6 +3,7 @@ import { tradingAssetCategory } from '../../domain/assetCategory'
 import { getTradingWorkspaceCategory } from '../../domain/tradingWorkspaceCatalog'
 import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
+import { useWorkspaceShellStore } from '../../store/workspaceShellStore'
 import { formatPct, formatPrice, formatQty, formatSignedUsd } from '../../utils/format'
 import { safeArray } from '../../utils/safe'
 import { PanelShell } from '../common/PanelShell'
@@ -11,7 +12,7 @@ export function PositionPanel() {
   const symbol = useTradingStore((s) => s.symbol)
   const positions = useTradingStore((s) => s.positions)
   const preset = useTradingStore((s) => s.workspacePositionPanelPreset)
-  const categoryId = useTradingStore((s) => s.activeWorkspaceCategoryId)
+  const categoryId = useWorkspaceShellStore((s) => s.activeWorkspaceCategoryId)
   const closePositionDemo = useTradingStore((s) => s.closePositionDemo)
 
   const rows = useMemo(() => {

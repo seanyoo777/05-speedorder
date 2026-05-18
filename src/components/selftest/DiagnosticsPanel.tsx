@@ -5,13 +5,23 @@ import {
   validateSpeedOrderFeatureFlags,
 } from '../../selftest/featureFlags'
 import { useSelfTestStore } from '../../selftest/selfTestStore'
+import {
+  readActiveWorkspaceVendorSnapshot,
+  readAllWorkspaceVendorSnapshots,
+} from '../../vendor/readWorkspaceVendorSnapshot'
 import { useTradingStore } from '../../store/tradingStore'
+import {
+  getActiveWorkspaceStoreApi,
+  getWorkspaceStoreCount,
+  getWorkspaceStoreRegistrySnapshot,
+  listWorkspaceStoreIds,
+} from '../../store/workspaceStoreRegistry'
+import { useWorkspaceShellStore } from '../../store/workspaceShellStore'
 import {
   getTradingWorkspaceSlot,
   listTradingWorkspaceSlots,
   validateTradingWorkspaceCatalog,
 } from '../../domain/tradingWorkspaceCatalog'
-import { readWorkspaceIdFromUrl } from '../../workspace/tradingWorkspaceUrl'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from '../../selftest/types'
 
 type TabId = 'checks' | 'audit' | 'flags' | 'stopmit' | 'workspace'
@@ -87,20 +97,18 @@ export function DiagnosticsPanel() {
   const flagValidation = useMemo(() => validateSpeedOrderFeatureFlags(), [])
   const workspaceValidation = useMemo(() => validateTradingWorkspaceCatalog(), [])
   const workspaceSlots = useMemo(() => listTradingWorkspaceSlots(), [])
-  const activeWorkspaceId = useTradingStore((s) => s.activeWorkspaceId)
-  const activeWorkspaceCategoryId = useTradingStore((s) => s.activeWorkspaceCategoryId)
-  const workspaceLayoutPreset = useTradingStore((s) => s.workspaceLayoutPreset)
-  const workspaceOrderFormTab = useTradingStore((s) => s.workspaceOrderFormTab)
-  const workspacePositionPanelPreset = useTradingStore((s) => s.workspacePositionPanelPreset)
-  const workspaceUrlInSync = useTradingStore((s) => s.workspaceUrlInSync)
-  const workspaceUrlFallbackUsed = useTradingStore((s) => s.workspaceUrlFallbackUsed)
-  const workspaceUrlQueryRaw = useTradingStore((s) => s.workspaceUrlQueryRaw)
+  const activeWorkspaceId = useWorkspaceShellStore((s) => s.activeWorkspaceId)
+  const activeWorkspaceCategoryId = useWorkspaceShellStore((s) => s.activeWorkspaceCategoryId)
+  const workspaceStoreCount = getWorkspaceStoreCount()
+  const workspaceStoreIds = listWorkspaceStoreIds()
+  const workspaceRegistry = getWorkspaceStoreRegistrySnapshot()
+  const activeStoreSymbol = getActiveWorkspaceStoreApi().getState().symbol
   const activeSlot = useMemo(
     () => getTradingWorkspaceSlot(activeWorkspaceId),
     [activeWorkspaceId],
   )
-  const urlWorkspaceId =
-    typeof window !== 'undefined' ? readWorkspaceIdFromUrl() : null
+  const allVendorSnapshots = readAllWorkspaceVendorSnapshots()
+  const activeVendorSnapshot = readActiveWorkspaceVendorSnapshot()
   const stopMitDraft = useTradingStore((s) => s.stopMitDraft)
   const audit = useMemo(() => {
     void auditTick
@@ -269,37 +277,68 @@ export function DiagnosticsPanel() {
                 <span>{activeWorkspaceId}</span>
               </li>
               <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">activeCategoryId</span>
+                <span className="text-so-muted">categoryId</span>
                 <span>{activeWorkspaceCategoryId}</span>
               </li>
               <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">url query</span>
-                <span>{workspaceUrlQueryRaw ?? urlWorkspaceId ?? '—'}</span>
+                <span className="text-so-muted">slotIndex</span>
+                <span>{activeSlot?.slotIndex ?? '—'}</span>
               </li>
               <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">url in sync</span>
-                <span className={workspaceUrlInSync ? 'text-so-bid' : 'text-so-ask'}>
-                  {String(workspaceUrlInSync)}
+                <span className="text-so-muted">activeSymbol</span>
+                <span>{activeStoreSymbol}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">vendor snapshot count</span>
+                <span>{allVendorSnapshots.length}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">workspace store count</span>
+                <span>{workspaceStoreCount}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">mockOnly</span>
+                <span className="text-so-bid">
+                  {activeVendorSnapshot?.mockOnly === true ? 'true' : '—'}
                 </span>
-              </li>
-              <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">url fallback used</span>
-                <span>{String(workspaceUrlFallbackUsed)}</span>
-              </li>
-              <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">layout / form / position</span>
-                <span>
-                  {workspaceLayoutPreset} · {workspaceOrderFormTab} · {workspacePositionPanelPreset}
-                </span>
-              </li>
-              <li className="flex justify-between px-2 py-1">
-                <span className="text-so-muted">orderBookPreset</span>
-                <span>{activeSlot?.orderBookPreset ?? '—'}</span>
               </li>
             </ul>
+            {activeVendorSnapshot && (
+              <div className="mb-2 rounded border border-so-border bg-so-bg/60 p-2 font-mono">
+                <p className="mb-1 text-[10px] font-medium text-zinc-200">Active vendor snapshot</p>
+                <p className="text-so-muted">
+                  mockOnly={String(activeVendorSnapshot.mockOnly)} ·{' '}
+                  {activeVendorSnapshot.workspaceId} · {activeVendorSnapshot.activeSymbol}
+                </p>
+                <p className="text-so-muted">
+                  {activeVendorSnapshot.assetClass} · book={activeVendorSnapshot.orderBookPreset} ·
+                  form={activeVendorSnapshot.orderFormPreset}
+                </p>
+                <p className="text-so-muted">
+                  layout={activeVendorSnapshot.layoutPreset} · stopMit=
+                  {String(activeVendorSnapshot.stopMitLockEnabled)} · close=
+                  {String(activeVendorSnapshot.positionCloseEnabled)}
+                </p>
+              </div>
+            )}
             <p className="text-so-muted">
-              mockOnly: {workspaceSlots.every((s) => s.mockOnly) ? 'true (all)' : 'mixed'}
+              catalog mockOnly: {workspaceSlots.every((s) => s.mockOnly) ? 'true (all)' : 'mixed'}
             </p>
+            <p className="text-so-muted">
+              registry: {workspaceStoreIds.length > 0 ? workspaceStoreIds.join(', ') : '—'}
+            </p>
+            {workspaceStoreIds.length > 0 && (
+              <ul className="mb-2 max-h-[80px] divide-y divide-so-border overflow-auto rounded border border-so-border font-mono">
+                {Object.entries(workspaceRegistry).map(([id, row]) => (
+                  <li key={id} className="flex justify-between px-2 py-0.5">
+                    <span className="text-zinc-200">{id}</span>
+                    <span className="text-so-muted">
+                      {row.symbol} · mockOnly={String(row.mockOnly)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <ul className="max-h-[160px] divide-y divide-so-border overflow-auto rounded border border-so-border font-mono">
               {workspaceSlots.map((s) => (
                 <li key={s.workspaceId} className="px-2 py-1">

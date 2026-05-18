@@ -14,7 +14,6 @@ import {
   type OrderBookPresetId,
   type PositionPanelPresetId,
 } from './tradingWorkspace'
-
 const SLOT_INDICES: readonly TradingWorkspaceSlotIndex[] = [1, 2, 3]
 
 export const TRADING_WORKSPACE_CATEGORIES: readonly TradingWorkspaceCategory[] = [

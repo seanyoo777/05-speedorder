@@ -1,15 +1,15 @@
 import { useEffect } from 'react'
 import { readWorkspaceIdFromUrl } from '../workspace/tradingWorkspaceUrl'
-import { useTradingStore } from '../store/tradingStore'
+import { useWorkspaceShellStore } from '../store/workspaceShellStore'
 
 /** Back/forward — re-apply workspace from URL without full reload */
 export function useWorkspaceUrlSync() {
   useEffect(() => {
     const onPop = () => {
       const raw = readWorkspaceIdFromUrl()
-      const current = useTradingStore.getState().activeWorkspaceId
+      const current = useWorkspaceShellStore.getState().activeWorkspaceId
       if (raw && raw !== current) {
-        useTradingStore.getState().activateWorkspace(raw, { syncUrl: false, urlRaw: raw })
+        useWorkspaceShellStore.getState().activateWorkspace(raw, { syncUrl: false, urlRaw: raw })
       }
     }
     window.addEventListener('popstate', onPop)

@@ -5,15 +5,15 @@ import {
   listTradingWorkspaceCategories,
 } from '../../domain/tradingWorkspaceCatalog'
 import type { TradingWorkspaceCategoryId } from '../../domain/tradingWorkspace'
-import { useTradingStore } from '../../store/tradingStore'
+import { useWorkspaceShellStore } from '../../store/workspaceShellStore'
 
 type InnerProps = {
   initialCategoryId: TradingWorkspaceCategoryId
 }
 
 function WorkspaceLauncherInner({ initialCategoryId }: InnerProps) {
-  const activeWorkspaceId = useTradingStore((s) => s.activeWorkspaceId)
-  const activateWorkspace = useTradingStore((s) => s.activateWorkspace)
+  const activeWorkspaceId = useWorkspaceShellStore((s) => s.activeWorkspaceId)
+  const activateWorkspace = useWorkspaceShellStore((s) => s.activateWorkspace)
   const [pickerCategoryId, setPickerCategoryId] =
     useState<TradingWorkspaceCategoryId>(initialCategoryId)
 
@@ -76,7 +76,7 @@ function WorkspaceLauncherInner({ initialCategoryId }: InnerProps) {
 }
 
 export function WorkspaceLauncher() {
-  const activeCategoryId = useTradingStore((s) => s.activeWorkspaceCategoryId)
+  const activeCategoryId = useWorkspaceShellStore((s) => s.activeWorkspaceCategoryId)
 
   return (
     <div className="shrink-0 border-b border-so-border bg-so-surface/80 px-2 py-2 lg:px-3">

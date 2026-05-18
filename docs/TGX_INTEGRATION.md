@@ -14,7 +14,7 @@ This document summarizes how **05-SpeedOrder** aligns with **TGX-CEX**-style hos
 
 High-level steps (aligned with `ARCHITECTURE.md`):
 
-1. **Package / workspace**: consume `05-SpeedOrder` as a workspace package; import `TradingPage` or individual panels. **Do not** import across monorepo siblings by relative filesystem paths; depend on the **05** package boundary only so repo layout stays vendor-safe.
+1. **Package / workspace**: consume `05-SpeedOrder` as a workspace package; import **`TradingWorkspaceHost`** from `src/workspace` (recommended) or legacy `TradingPage` / individual panels. **Do not** import across monorepo siblings by relative filesystem paths; depend on the **05** package boundary only so repo layout stays vendor-safe.
 2. **Router → symbol**: when the route pair (e.g. `:pair`) changes, call `useTradingStore.getState().setSymbol(normalized)` so book, chart slot, and position filter follow the same pipeline as the standalone app.
 3. **Realtime**:
    - **Demo**: keep `useMockRealtime` + `applyMockTick`.
@@ -23,9 +23,35 @@ High-level steps (aligned with `ARCHITECTURE.md`):
    - **Demo**: use existing `submitMockSpeedOrder` re-export.
    - **Live**: replace submission with REST/WS in the host; map responses to `upsertOrder` / `pushFill`. For local reconciliation only, reuse **`executeSpeedOrderFill`** so position math matches the mock engine.
 
+## TradingWorkspaceHost embed (W5)
+
+```tsx
+import { TradingWorkspaceHost } from '05-SpeedOrder/src/workspace'
+
+export function TgxSpeedOrderSlot() {
+  return (
+    <TradingWorkspaceHost
+      mockOnly
+      initialWorkspaceId="crypto:1"
+      showLauncher
+      compact
+      onWorkspaceChange={(snap) => {
+        // Host tab title / risk chrome
+        console.log(snap.workspaceId, snap.activeSymbol)
+      }}
+    />
+  )
+}
+```
+
+- **`onWorkspaceChange`** — `TradingWorkspaceVendorSnapshot` on every workspace switch (same shape as `readActiveWorkspaceVendorSnapshot()`).
+- **`renderHeaderSlot`** — `{ activeSnapshot, allSnapshots }`; mount exposes all **15** catalog snapshots via `allSnapshots`.
+- **`enableUrlSync`** — leave `false` in TGX; drive `initialWorkspaceId` from the host router instead.
+- Legacy **`useTradingStore`** / **`readSpeedOrderVendorSerializableSnapshot`** remain available for market-sync panels.
+
 ## Multi-store / embedded panels
 
-`createSubmitMockSpeedOrder(store: StoreApi<TradingStore>)` allows TGX to attach the speed-order pipeline to a **store instance** provided by the host (e.g. scoped per sub-account or widget). The default app uses the singleton composed store.
+`createSubmitMockSpeedOrder(store: StoreApi<TradingStore>)` allows TGX to attach the speed-order pipeline to a **store instance** provided by the host (e.g. scoped per sub-account or widget). Per-workspace registry stores are created via `createTradingStore(workspaceId)` (W3).
 
 ## UTE compatibility (forward-looking)
 
@@ -43,6 +69,7 @@ Import from **`src/vendor`** (also re-exported on **`src/store/tradingStore`** f
 
 - **`readSpeedOrderVendorSerializableSnapshot(state)`** — pass `useTradingStore.getState()` (or any `TradingStoreState`); returns `orderExecutionPolicy`, `engineStatus`, `symbolRegistry` keys, **`marketSync`** counts, **`activeSymbolSpec`** subset, and **`marketSyncCatalog`**.
 - **`getSpeedOrderVendorBundle(state)`** — same snapshot plus **`speedOrderSymbolRegistry`** function handles and the static **`MARKET_SYNC_ACTIONS`** reference.
+- **W4 workspace** — `readWorkspaceVendorSnapshot(id)`, `readAllWorkspaceVendorSnapshots()`, `readActiveWorkspaceVendorSnapshot()` for per-slot HTS meta (`workspaceId`, presets, `mockOnly`) without replacing the legacy snapshot API.
 
 Example (conceptual):
 

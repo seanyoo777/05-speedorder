@@ -4,7 +4,6 @@ import type { RiskSnapshot } from '../domain/risk'
 import type { StopMitDraft, StopMitDraftPatch } from '../domain/stopMitDraft'
 import type {
   PositionPanelPresetId,
-  TradingWorkspaceCategoryId,
   WorkspaceLayoutPresetId,
 } from '../domain/tradingWorkspace'
 import type { TradingWorkspaceSlot } from '../domain/tradingWorkspace'
@@ -75,15 +74,10 @@ export type TradingStoreState = {
     rowPrice: number
     quantity: number
   }
-  /** W2 — active trading workspace slot (single store) */
-  activeWorkspaceId: string
-  activeWorkspaceCategoryId: TradingWorkspaceCategoryId
+  /** W3 — per-workspace runtime (isolated registry store) */
   workspaceOrderFormTab: WorkspaceOrderFormTab
   workspacePositionPanelPreset: PositionPanelPresetId
   workspaceLayoutPreset: WorkspaceLayoutPresetId
-  workspaceUrlQueryRaw: string | null
-  workspaceUrlFallbackUsed: boolean
-  workspaceUrlInSync: boolean
 }
 
 export type TradingStoreActions = {
@@ -134,15 +128,6 @@ export type TradingStoreActions = {
   ) => void
   setWorkspaceOrderFormTab: (tab: WorkspaceOrderFormTab) => void
   setWorkspaceRuntimeFromSlot: (slot: TradingWorkspaceSlot) => void
-  activateWorkspace: (
-    workspaceId: string,
-    options?: {
-      syncUrl?: boolean
-      urlRaw?: string | null
-      historyMode?: 'replace' | 'push'
-    },
-  ) => void
-  initWorkspaceFromUrl: (search?: string) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions

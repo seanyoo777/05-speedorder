@@ -31,4 +31,4 @@ npm run smoke   # headless self-test only
 - [MASTER_MANUAL.md](MASTER_MANUAL.md) — 통합 진입점
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 폴더·컴포넌트
 - [docs/SELF_TEST.md](docs/SELF_TEST.md) — Diagnostics / smoke
-- [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) — 자산군별 거래창 (**W2** Launcher + `?workspaceId=` 연동)
+- [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) — 자산군별 거래창 (**W5** `TradingWorkspaceHost` embed 포함)

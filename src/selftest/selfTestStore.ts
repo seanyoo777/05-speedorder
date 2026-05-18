@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import { useTradingStore } from '../store/tradingStore'
+import { createSelfTestStoreRunner, getTradingStoreView, useTradingStore } from '../store/tradingStore'
+import {
+  clearWorkspaceStoreRegistry,
+  getOrCreateWorkspaceStore,
+} from '../store/workspaceStoreRegistry'
+import { useWorkspaceShellStore } from '../store/workspaceShellStore'
+import { DEFAULT_WORKSPACE_ID } from '../workspace/tradingWorkspaceUrl'
 import { recordSelfTestRunSummary } from './auditTrail'
 import { runPostActionSelfTest, runSpeedOrderSelfTest } from './runSpeedOrderSelfTest'
 import type { SelfTestSummary } from './types'
@@ -26,8 +32,12 @@ export const useSelfTestStore = create<SelfTestUiStore>((set) => ({
 
   runAll: () => {
     set({ running: true })
-    const state = useTradingStore.getState()
-    const summary = runSpeedOrderSelfTest(state, { scope: 'full' }, useTradingStore)
+    clearWorkspaceStoreRegistry()
+    useWorkspaceShellStore.getState().activateWorkspace(DEFAULT_WORKSPACE_ID, { syncUrl: false })
+    getOrCreateWorkspaceStore(DEFAULT_WORKSPACE_ID)
+    const runner = createSelfTestStoreRunner()
+    const state = getTradingStoreView()
+    const summary = runSpeedOrderSelfTest(state, { scope: 'full' }, runner)
     recordSelfTestRunSummary(
       summary.status,
       summary.issueCount,

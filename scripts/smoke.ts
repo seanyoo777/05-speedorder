@@ -4,10 +4,20 @@
  */
 import { appendSelfTestAudit } from '../src/selftest/auditTrail'
 import { runSpeedOrderSelfTest } from '../src/selftest/runSpeedOrderSelfTest'
-import { useTradingStore } from '../src/store/tradingStore'
+import { createSelfTestStoreRunner, getTradingStoreView } from '../src/store/tradingStore'
+import {
+  clearWorkspaceStoreRegistry,
+  getOrCreateWorkspaceStore,
+} from '../src/store/workspaceStoreRegistry'
+import { useWorkspaceShellStore } from '../src/store/workspaceShellStore'
+import { DEFAULT_WORKSPACE_ID } from '../src/workspace/tradingWorkspaceUrl'
 
-const state = useTradingStore.getState()
-const summary = runSpeedOrderSelfTest(state, { scope: 'full' }, useTradingStore)
+clearWorkspaceStoreRegistry()
+useWorkspaceShellStore.getState().activateWorkspace(DEFAULT_WORKSPACE_ID, { syncUrl: false })
+getOrCreateWorkspaceStore(DEFAULT_WORKSPACE_ID)
+const runner = createSelfTestStoreRunner()
+const state = getTradingStoreView()
+const summary = runSpeedOrderSelfTest(state, { scope: 'full' }, runner)
 
 appendSelfTestAudit({
   category: 'smoke',
