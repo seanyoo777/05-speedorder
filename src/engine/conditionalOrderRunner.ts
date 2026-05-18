@@ -10,7 +10,9 @@ import type {
   TradeFillRow,
 } from '../types/trading'
 import { safeArray } from '../utils/safe'
-import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
+import { getSymbolSpec } from '../symbols/registry'
+import { categoryLabel, tradingAssetCategory } from '../domain/assetCategory'
+import { executeSpeedOrderFill, revaluePositions } from './mockExecutionEngine'
 
 /** MIT/STOP: 매수는 아래→위로 트리거 터치, 매도는 위→아래로 터치 */
 export function mitStopTriggerCrossed(
@@ -51,6 +53,7 @@ export type ConditionalTickSlice = {
   conditionalOrders: ConditionalOrderRow[]
   tickers: TickerRow[]
   riskSnapshot: RiskSnapshot
+  cryptoPositionMode: 'one_way' | 'hedge'
 }
 
 /** mock 틱·가격 갱신 후 호출 — 활성 심볼의 pending MIT/STOP만 FIFO 체결 */
@@ -81,7 +84,7 @@ export function runConditionalOrdersOnTick(
     const px = currLast
     if (!Number.isFinite(qty) || qty <= 0 || !Number.isFinite(px) || px <= 0) continue
 
-    const { positions: traded, fill } = executeNetSpeedFill({
+    const { positions: traded, fill: fillRaw } = executeSpeedOrderFill({
       positions,
       symbol: c.symbol,
       side: c.side,
@@ -89,7 +92,15 @@ export function runConditionalOrdersOnTick(
       price: px,
       fillId: `f-cond-${c.id}-${ts}`,
       timestamp: ts,
+      positionMode: state.cryptoPositionMode,
     })
+    const specC = getSymbolSpec(c.symbol)
+    const fill: TradeFillRow = {
+      ...fillRaw,
+      orderKind: c.kind === 'MIT' ? 'mit' : 'stop',
+      statusLabel: 'filled',
+      segmentLabel: categoryLabel(tradingAssetCategory(specC)),
+    }
 
     positions = revaluePositions(traded, state.tickers, state.symbol, currLast)
     fills = [fill, ...fills].slice(0, 200)

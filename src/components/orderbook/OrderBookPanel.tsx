@@ -7,11 +7,12 @@ import {
   effectiveOrderBookTokens,
   type OrderBookPresetTag,
 } from '../../config/orderBookDesignPresets'
-import { executeImmediateMockMarketOrder } from '../../engine/immediateMarketFill'
+import type { OrderSide } from '../../types/trading'
 import { formatByDecimals } from '../../utils/format'
 import { safeArray, safeNumber } from '../../utils/safe'
 import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
+import { executeImmediateMockMarketOrder } from '../../engine/immediateMarketFill'
 import { roundPriceBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
 import { RecentOrderActionsLog } from '../speedorder/RecentOrderActionsLog'
@@ -80,7 +81,9 @@ export function OrderBookPanel() {
     setOrderBookDoubleClickEnabled,
     setOrderBookPendingLimitPrice,
     setOrderBookPendingTriggerPrice,
+    setOrderBookPendingTriggerBookSide,
     setOrderBookHighlightPrice,
+    setPendingBookOrderConfirm,
     setOrderBookDesignPreset,
     setOrderBookColorInvert,
     uiOrderBookFontScale,
@@ -108,6 +111,8 @@ export function OrderBookPanel() {
       setOrderBookDoubleClickEnabled: s.setOrderBookDoubleClickEnabled,
       setOrderBookPendingLimitPrice: s.setOrderBookPendingLimitPrice,
       setOrderBookPendingTriggerPrice: s.setOrderBookPendingTriggerPrice,
+      setOrderBookPendingTriggerBookSide: s.setOrderBookPendingTriggerBookSide,
+      setPendingBookOrderConfirm: s.setPendingBookOrderConfirm,
       setOrderBookHighlightPrice: s.setOrderBookHighlightPrice,
       setOrderBookDesignPreset: s.setOrderBookDesignPreset,
       setOrderBookColorInvert: s.setOrderBookColorInvert,
@@ -132,6 +137,8 @@ export function OrderBookPanel() {
   const centerFlashTimerRef = useRef<number | null>(null)
   const highlightClearTimerRef = useRef<number | null>(null)
   const highlightAnchorRef = useRef<number | null>(null)
+  /** 더블클릭 확인 모달 id — 렌더 순수성(react-hooks/purity)을 위해 Date.now 대신 시퀀스 */
+  const bookOrderConfirmSeqRef = useRef(0)
 
   useLayoutEffect(() => {
     const symChanged = symbolRef.current !== symbol
@@ -251,7 +258,7 @@ export function OrderBookPanel() {
   const fmtP = (n: number) => formatByDecimals(n, spec.priceDecimals)
   const fmtQ = (n: number) => formatByDecimals(n, spec.qtyDecimals)
 
-  const obFontMult = uiOrderBookFontScale * (uiCompactMode ? 0.94 : 1)
+  const obFontMult = uiOrderBookFontScale * (uiCompactMode ? 0.97 : 1)
   const markerLabel =
     orderBookHighlightPrice != null
       ? `▶ ${formatByDecimals(roundPriceBySpec(spec, orderBookHighlightPrice), spec.priceDecimals)}`
@@ -293,6 +300,7 @@ export function OrderBookPanel() {
     const p = roundPriceBySpec(spec, rawPrice)
     setOrderBookPendingLimitPrice(p)
     setOrderBookPendingTriggerPrice(p)
+    setOrderBookPendingTriggerBookSide(side)
     setOrderBookHighlightPrice(p)
     armHighlightClear(p)
     pulseRow(side, p)
@@ -310,6 +318,7 @@ export function OrderBookPanel() {
     const p = roundPriceBySpec(spec, rawPrice)
     setOrderBookPendingLimitPrice(p)
     setOrderBookPendingTriggerPrice(p)
+    setOrderBookPendingTriggerBookSide(side)
     setOrderBookHighlightPrice(p)
     armHighlightClear(p)
     pulseRow(side, p)
@@ -318,7 +327,13 @@ export function OrderBookPanel() {
       oneClickTimerRef.current = null
     }
     if (!orderBookDoubleClickEnabled) return
-    runImmediate(side, p)
+    const orderSide: OrderSide = side === 'ask' ? 'buy' : 'sell'
+    setPendingBookOrderConfirm({
+      id: `book-${++bookOrderConfirmSeqRef.current}`,
+      side: orderSide,
+      rowPrice: p,
+      quantity: orderBookOrderQty,
+    })
   }
 
   const askPads = Math.max(0, ROWS - askRows.length)
@@ -455,13 +470,13 @@ export function OrderBookPanel() {
   const headerToolbar = (
     <div className="flex min-w-0 shrink-0 flex-col gap-1.5 border-b border-[#1f2937]/30 bg-[#070b12] px-2 py-1.5">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="shrink-0 text-[10px] font-medium text-zinc-500">수량</span>
-        <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1">
+        <span className="shrink-0 text-[11px] font-medium text-zinc-500">수량</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1.5">
           <input
             type="number"
             step={spec.lotSize}
             min={0}
-            className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-zinc-200 outline-none placeholder:text-zinc-600"
+            className="min-w-0 flex-1 bg-transparent font-mono text-[12px] text-zinc-200 outline-none placeholder:text-zinc-600"
             value={orderBookOrderQty}
             onChange={(e) => setOrderBookOrderQty(Number(e.target.value))}
           />
@@ -469,7 +484,7 @@ export function OrderBookPanel() {
       </div>
       <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
         <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1.5">
-          <span className="text-[10px] text-zinc-400">원클릭 주문</span>
+          <span className="text-[11px] text-zinc-400">원클릭 주문</span>
           <input
             type="checkbox"
             className="accent-violet-500"
@@ -478,7 +493,7 @@ export function OrderBookPanel() {
           />
         </label>
         <label className="flex cursor-pointer items-center justify-between gap-2 rounded border border-[#1f2937]/30 bg-[#0b1118] px-2 py-1.5">
-          <span className="text-[10px] text-zinc-400">더블클릭 주문</span>
+          <span className="text-[11px] text-zinc-400">더블클릭 주문</span>
           <input
             type="checkbox"
             className="accent-violet-500"
@@ -535,7 +550,7 @@ export function OrderBookPanel() {
       <button
         key={rowKey}
         type="button"
-        className={`relative grid w-full min-w-0 shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 items-stretch border-b border-[#1f2937]/30 transition-colors duration-100 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} ${tk.rowFontClass} ${tk.rowCellPaddingClass} ${
+        className={`relative grid w-full min-w-0 shrink-0 grid-cols-[minmax(0,1.05fr)_minmax(0,0.72fr)_minmax(0,0.58fr)] gap-x-0.5 items-stretch border-b border-[#1f2937]/30 transition-colors duration-100 ${uiCompactMode ? 'h-[19px] min-h-[18px]' : tk.rowHeightClass} ${tk.rowFontClass} ${tk.rowCellPaddingClass} ${
           hl ? 'z-[1] bg-violet-500/[0.07] ring-1 ring-inset ring-violet-500/35' : ''
         } ${execClass} ${
           isPulse && !isExec ? 'z-[1] bg-violet-500/[0.06] ring-1 ring-inset ring-violet-400/20' : ''
@@ -578,7 +593,7 @@ export function OrderBookPanel() {
     >
       <div
         className="flex h-full min-h-0 flex-col"
-        style={{ fontSize: `calc(11px * ${obFontMult})` }}
+        style={{ fontSize: `calc(12px * ${obFontMult})` }}
       >
         {headerToolbar}
 
@@ -595,7 +610,7 @@ export function OrderBookPanel() {
                   {Array.from({ length: askPads }).map((_, i) => (
                     <div
                       key={`ask-pad-${i}`}
-                      className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                      className={`shrink-0 ${uiCompactMode ? 'h-[19px] min-h-[18px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
                     />
                   ))}
                   {askRows.map((r) => renderRow(r, 'ask', tk.askPriceClass))}
@@ -648,7 +663,7 @@ export function OrderBookPanel() {
                   {Array.from({ length: bidPads }).map((_, i) => (
                     <div
                       key={`bid-pad-${i}`}
-                      className={`shrink-0 ${uiCompactMode ? 'h-[17px] min-h-[16px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
+                      className={`shrink-0 ${uiCompactMode ? 'h-[19px] min-h-[18px]' : tk.rowHeightClass} border-b border-[#1f2937]/25 bg-[#070b12]/90`}
                     />
                   ))}
                 </div>

@@ -33,6 +33,16 @@ export type {
   ConditionalOrderStatus,
   ConditionalOutcomeLabel,
 } from '../types/trading'
+export type {
+  StopMitDraft,
+  StopMitDraftPatch,
+  PriceLockState,
+  PriceLockSource,
+} from './stopMitDraft'
+export {
+  createEmptyStopMitDraft,
+  applyStopMitDraftPatch,
+} from './stopMitDraft'
 export {
   DEFAULT_RISK_SNAPSHOT,
   deriveRiskSnapshotFromPositions,

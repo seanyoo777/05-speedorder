@@ -6,6 +6,7 @@ import {
   readOrderBookPresetFromLs,
 } from '../../config/orderBookDesignPresets'
 import type { OrderBookDesignPresetId } from '../../config/orderBookDesignPresets'
+import type { OrderSide } from '../../types/trading'
 import type { TradingStore } from '../tradingStoreTypes'
 
 const DEFAULT_BOOK_QTY = 0.05
@@ -21,6 +22,7 @@ export const createOrderBookUiSlice: StateCreator<
     | 'orderBookDoubleClickEnabled'
     | 'orderBookPendingLimitPrice'
     | 'orderBookPendingTriggerPrice'
+    | 'orderBookPendingTriggerBookSide'
     | 'orderBookHighlightPrice'
     | 'orderBookDesignPreset'
     | 'orderBookColorInvert'
@@ -30,10 +32,13 @@ export const createOrderBookUiSlice: StateCreator<
     | 'setOrderBookPendingLimitPrice'
     | 'clearOrderBookPendingLimitPrice'
     | 'setOrderBookPendingTriggerPrice'
+    | 'setOrderBookPendingTriggerBookSide'
     | 'clearOrderBookPendingTriggerPrice'
     | 'setOrderBookHighlightPrice'
     | 'setOrderBookDesignPreset'
     | 'setOrderBookColorInvert'
+    | 'pendingBookOrderConfirm'
+    | 'setPendingBookOrderConfirm'
   >
 > = (set) => ({
   orderBookOrderQty: DEFAULT_BOOK_QTY,
@@ -41,9 +46,16 @@ export const createOrderBookUiSlice: StateCreator<
   orderBookDoubleClickEnabled: false,
   orderBookPendingLimitPrice: null as number | null,
   orderBookPendingTriggerPrice: null as number | null,
+  orderBookPendingTriggerBookSide: null as 'bid' | 'ask' | null,
   orderBookHighlightPrice: null as number | null,
   orderBookDesignPreset: readOrderBookPresetFromLs(),
   orderBookColorInvert: readOrderBookInvertFromLs(),
+  pendingBookOrderConfirm: null as null | {
+    id: string
+    side: OrderSide
+    rowPrice: number
+    quantity: number
+  },
 
   setOrderBookOrderQty: (orderBookOrderQty) =>
     set(() => ({
@@ -60,7 +72,11 @@ export const createOrderBookUiSlice: StateCreator<
 
   setOrderBookPendingTriggerPrice: (orderBookPendingTriggerPrice) => set({ orderBookPendingTriggerPrice }),
 
-  clearOrderBookPendingTriggerPrice: () => set({ orderBookPendingTriggerPrice: null }),
+  setOrderBookPendingTriggerBookSide: (orderBookPendingTriggerBookSide) =>
+    set({ orderBookPendingTriggerBookSide }),
+
+  clearOrderBookPendingTriggerPrice: () =>
+    set({ orderBookPendingTriggerPrice: null, orderBookPendingTriggerBookSide: null }),
 
   setOrderBookHighlightPrice: (orderBookHighlightPrice) => set({ orderBookHighlightPrice }),
 
@@ -81,4 +97,6 @@ export const createOrderBookUiSlice: StateCreator<
     }
     set({ orderBookColorInvert: v })
   },
+
+  setPendingBookOrderConfirm: (pendingBookOrderConfirm) => set({ pendingBookOrderConfirm }),
 })

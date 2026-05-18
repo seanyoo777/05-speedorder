@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import { estimateTradeFee, revaluePositions } from '../../engine/mockExecutionEngine'
 import type { TradeFillRow } from '../../types/trading'
+import { categoryLabel, tradingAssetCategory } from '../../domain/assetCategory'
 import { mergeRiskSnapshotWithPositions } from '../../domain/risk'
 import { getSymbolSpec } from '../../symbols/registry'
 import { calculatePnlBySpec, feeNotionalAbsBySpec } from '../../utils/specInstrument'
@@ -58,6 +59,9 @@ export const createPositionSlice: StateCreator<
         realizedPnl: net,
         time: new Date(ts).toLocaleTimeString('ko-KR', { hour12: false }),
         timestamp: ts,
+        orderKind: 'market',
+        statusLabel: 'filled',
+        segmentLabel: categoryLabel(tradingAssetCategory(spec)),
       }
       const next = s.positions.filter((p) => p.id !== id)
       const positions = revaluePositions(next, s.tickers, s.symbol, s.lastPrice)

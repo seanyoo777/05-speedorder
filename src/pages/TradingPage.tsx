@@ -6,6 +6,7 @@ import { PositionPanel } from '../components/position/PositionPanel'
 import { TopTickerBar } from '../components/ticker/TopTickerBar'
 import { useMockRealtime } from '../hooks/useMockRealtime'
 import { TradingLayout } from '../layouts/TradingLayout'
+import { SelfTestCenter } from '../components/selftest/SelfTestCenter'
 
 const HeavyDemoChart = lazy(() => import('../components/chart/ChartArea'))
 
@@ -40,6 +41,7 @@ export default function TradingPage() {
   )
 
   return (
+    <>
     <TradingLayout
       ticker={
         <ErrorBoundary>
@@ -56,5 +58,7 @@ export default function TradingPage() {
       orderColumn={orderColumn}
       bottomRow={bottomRow}
     />
+    <SelfTestCenter />
+    </>
   )
 }

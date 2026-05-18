@@ -2,12 +2,13 @@ import type { StoreApi } from 'zustand'
 import { mergeRiskSnapshotWithPositions } from '../domain/risk'
 import { speedOrderUxFeedback } from '../feedback/speedOrderUxFeedback'
 import { getSymbolSpec } from '../symbols/registry'
-import type { OrderRecordRow, OrderSide } from '../types/trading'
+import type { OrderRecordRow, OrderSide, TradeFillRow } from '../types/trading'
 import type { TradingStore } from '../store/tradingStoreTypes'
 import { formatByDecimals } from '../utils/format'
 import { roundQtyBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
-import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
+import { categoryLabel, tradingAssetCategory } from '../domain/assetCategory'
+import { executeSpeedOrderFill, revaluePositions } from './mockExecutionEngine'
 
 /**
  * 호가 더블클릭/원클릭용 즉시 시장가 체결 (mock, 지연 없음).
@@ -40,7 +41,7 @@ export function executeImmediateMockMarketOrder(
   const time = new Date(ts).toLocaleTimeString('ko-KR', { hour12: false })
   const oid = `o-book-${ts}`
 
-  const { positions: traded, fill } = executeNetSpeedFill({
+  const { positions: traded, fill: fillRaw } = executeSpeedOrderFill({
     positions: st.positions,
     symbol: st.symbol,
     side: input.side,
@@ -48,7 +49,14 @@ export function executeImmediateMockMarketOrder(
     price: px,
     fillId: `f-book-${oid}`,
     timestamp: ts,
+    positionMode: st.cryptoPositionMode,
   })
+  const fill: TradeFillRow = {
+    ...fillRaw,
+    orderKind: 'market',
+    statusLabel: 'filled',
+    segmentLabel: categoryLabel(tradingAssetCategory(spec)),
+  }
 
   const positions = revaluePositions(traded, st.tickers, st.symbol, px)
   const orderRow: OrderRecordRow = {

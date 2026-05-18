@@ -1,9 +1,10 @@
 import type { StoreApi } from 'zustand'
 import { mergeRiskSnapshotWithPositions } from '../domain/risk'
 import { speedOrderUxFeedback } from '../feedback/speedOrderUxFeedback'
-import { executeNetSpeedFill, revaluePositions } from './mockExecutionEngine'
+import { categoryLabel, tradingAssetCategory } from '../domain/assetCategory'
+import { executeSpeedOrderFill, revaluePositions } from './mockExecutionEngine'
 import { getSymbolSpec } from '../symbols/registry'
-import type { OrderRecordRow, OrderSide } from '../types/trading'
+import type { OrderRecordRow, OrderSide, TradeFillRow } from '../types/trading'
 import { formatByDecimals } from '../utils/format'
 import { roundPriceBySpec, roundQtyBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
@@ -75,7 +76,7 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
         window.setTimeout(() => {
           const st = store.getState()
           const ts = Date.now()
-          const { positions: traded, fill } = executeNetSpeedFill({
+          const { positions: traded, fill: fillRaw } = executeSpeedOrderFill({
             positions: st.positions,
             symbol: st.symbol,
             side: input.side,
@@ -83,7 +84,15 @@ export function createSubmitMockSpeedOrder(store: StoreApi<TradingStore>) {
             price: execPrice,
             fillId: `f-${id}`,
             timestamp: ts,
+            positionMode: st.cryptoPositionMode,
           })
+          const specFill = getSymbolSpec(st.symbol)
+          const fill: TradeFillRow = {
+            ...fillRaw,
+            orderKind: input.orderType,
+            statusLabel: 'filled',
+            segmentLabel: categoryLabel(tradingAssetCategory(specFill)),
+          }
           const positions = revaluePositions(traded, st.tickers, st.symbol, st.lastPrice)
           const orderFilled: OrderRecordRow = {
             ...baseOrder,

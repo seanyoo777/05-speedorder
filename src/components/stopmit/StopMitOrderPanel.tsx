@@ -1,32 +1,52 @@
-import { useMemo, useState } from 'react'
-import type { ConditionalOrderKind, OrderSide } from '../../types/trading'
+import { useEffect, useMemo } from 'react'
 import { classifyConditionalOutcome } from '../../engine/conditionalOrderRunner'
 import { getSymbolSpec } from '../../symbols/registry'
 import { useTradingStore } from '../../store/tradingStore'
 import { formatByDecimals } from '../../utils/format'
-import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
+import { roundQtyBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
+
+function lockSourceLabel(source: string): string {
+  if (source === 'orderbook') return '호가'
+  if (source === 'manual') return '수동'
+  return '—'
+}
 
 export function StopMitOrderPanel() {
   const symbol = useTradingStore((s) => s.symbol)
   const lastPrice = useTradingStore((s) => s.lastPrice)
   const positions = useTradingStore((s) => s.positions)
   const conditionalOrders = useTradingStore((s) => s.conditionalOrders)
+  const stopMitDraft = useTradingStore((s) => s.stopMitDraft)
+  const patchStopMitDraft = useTradingStore((s) => s.patchStopMitDraft)
+  const consumeOrderBookPendingTrigger = useTradingStore((s) => s.consumeOrderBookPendingTrigger)
   const registerConditionalOrder = useTradingStore((s) => s.registerConditionalOrder)
   const cancelConditionalOrder = useTradingStore((s) => s.cancelConditionalOrder)
 
-  const [kind, setKind] = useState<ConditionalOrderKind>('MIT')
-  const [side, setSide] = useState<OrderSide>('buy')
-  const [triggerPrice, setTriggerPrice] = useState('')
-  const [quantity, setQuantity] = useState('0.05')
+  const { kind, side, triggerPrice, quantity, priceLock } = stopMitDraft
 
   const spec = getSymbolSpec(symbol)
   const pos = positions.find((p) => p.symbol === symbol && p.size > 0)
 
+  useEffect(() => {
+    if (useTradingStore.getState().orderBookPendingTriggerPrice != null) {
+      consumeOrderBookPendingTrigger()
+    }
+    return useTradingStore.subscribe((st, prev) => {
+      const p = st.orderBookPendingTriggerPrice
+      if (p != null && p !== prev.orderBookPendingTriggerPrice) {
+        st.consumeOrderBookPendingTrigger()
+      }
+    })
+  }, [consumeOrderBookPendingTrigger])
+
+  const triggerInputValue =
+    triggerPrice != null ? String(triggerPrice) : ''
+
   const preview = useMemo(() => {
-    const tp = roundPriceBySpec(spec, Number(triggerPrice))
-    const q = roundQtyBySpec(spec, Number(quantity))
-    if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return '—'
+    const tp = triggerPrice
+    const q = quantity != null ? roundQtyBySpec(spec, quantity) : NaN
+    if (tp == null || !Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return '—'
     return classifyConditionalOutcome(pos, side, q)
   }, [pos, side, triggerPrice, quantity, spec])
 
@@ -36,9 +56,9 @@ export function StopMitOrderPanel() {
   )
 
   const submit = () => {
-    const tp = roundPriceBySpec(spec, Number(triggerPrice))
-    const q = roundQtyBySpec(spec, Number(quantity))
-    if (!Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return
+    const tp = triggerPrice
+    const q = quantity != null ? roundQtyBySpec(spec, quantity) : NaN
+    if (tp == null || !Number.isFinite(tp) || tp <= 0 || !Number.isFinite(q) || q <= 0) return
     registerConditionalOrder({ kind, side, triggerPrice: tp, quantity: q })
   }
 
@@ -49,14 +69,14 @@ export function StopMitOrderPanel() {
           <button
             type="button"
             className={`flex-1 rounded border py-1.5 ${kind === 'MIT' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'}`}
-            onClick={() => setKind('MIT')}
+            onClick={() => patchStopMitDraft({ op: 'setKind', kind: 'MIT' })}
           >
             MIT
           </button>
           <button
             type="button"
             className={`flex-1 rounded border py-1.5 ${kind === 'STOP' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'}`}
-            onClick={() => setKind('STOP')}
+            onClick={() => patchStopMitDraft({ op: 'setKind', kind: 'STOP' })}
           >
             스탑로스
           </button>
@@ -66,28 +86,65 @@ export function StopMitOrderPanel() {
           <button
             type="button"
             className={`flex-1 rounded border py-1.5 ${side === 'buy' ? 'border-so-bid bg-so-bid/15' : 'border-so-border'}`}
-            onClick={() => setSide('buy')}
+            onClick={() => patchStopMitDraft({ op: 'setSide', side: 'buy' })}
           >
             매수
           </button>
           <button
             type="button"
             className={`flex-1 rounded border py-1.5 ${side === 'sell' ? 'border-so-ask bg-so-ask/15' : 'border-so-border'}`}
-            onClick={() => setSide('sell')}
+            onClick={() => patchStopMitDraft({ op: 'setSide', side: 'sell' })}
           >
             매도
           </button>
         </div>
 
         <label className="block text-so-muted">
-          트리거 가격
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span>{kind === 'STOP' ? '스탑 가격' : '트리거 가격'}</span>
+            {priceLock.locked ? (
+              <span className="inline-flex items-center gap-1 rounded border border-so-accent/40 bg-so-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-so-accent">
+                🔒 Locked
+              </span>
+            ) : null}
+            {priceLock.locked ? (
+              <span className="text-[10px] text-so-muted">
+                ({lockSourceLabel(priceLock.source)}
+                {priceLock.bookSide ? ` · ${priceLock.bookSide}` : ''})
+              </span>
+            ) : null}
+            {priceLock.locked ? (
+              <button
+                type="button"
+                className="text-[10px] text-so-ask underline hover:no-underline"
+                onClick={() => patchStopMitDraft({ op: 'unlock' })}
+              >
+                unlock
+              </button>
+            ) : null}
+          </div>
           <input
             className="mt-1 w-full rounded border border-so-border bg-so-bg px-2 py-1.5 font-mono text-white"
             type="number"
-            value={triggerPrice}
-            onChange={(e) => setTriggerPrice(e.target.value)}
-            placeholder={formatByDecimals(lastPrice, spec.priceDecimals)}
+            value={triggerInputValue}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') {
+                patchStopMitDraft({ op: 'unlock' })
+                return
+              }
+              const n = Number(raw)
+              if (Number.isFinite(n) && n > 0) patchStopMitDraft({ op: 'setManualPrice', price: n })
+            }}
+            placeholder={priceLock.locked ? undefined : '호가 클릭 또는 직접 입력'}
           />
+          <p className="mt-1 text-[10px] text-so-muted">
+            참고 현재가{' '}
+            <span className="font-mono text-zinc-400">
+              {formatByDecimals(lastPrice, spec.priceDecimals)}
+            </span>
+            <span className="text-so-muted/70"> (자동 추종 안 함)</span>
+          </p>
         </label>
 
         <label className="block text-so-muted">
@@ -97,8 +154,11 @@ export function StopMitOrderPanel() {
             type="number"
             step={spec.lotSize}
             min={0}
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
+            value={quantity ?? ''}
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              if (Number.isFinite(n) && n > 0) patchStopMitDraft({ op: 'setQuantity', quantity: n })
+            }}
           />
         </label>
 

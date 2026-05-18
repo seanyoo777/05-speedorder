@@ -24,12 +24,13 @@ src/
     common/        ErrorBoundary, PanelShell
   layouts/         TradingLayout (반응형 그리드)
   pages/           TradingPage (패널 조합 + mock 실시간)
-  symbols/         SYMBOL_REGISTRY, getSymbolSpec, STANDARD_SYMBOLS
+  symbols/         SYMBOL_REGISTRY, getSymbolSpec, STANDARD_SYMBOLS (+ `index.ts` barrel)
+  vendor/          ORDER_EXECUTION_POLICY, engine status, market sync catalog, UTE snapshot readers
   services/
     websocket/     WebSocketClient 스텁 + 메시지 타입
     websocketService/  위 모듈 re-export (네이밍 통일용)
   domain/          공통 타입(OrderRequest, RiskSnapshot 등) — TGX/MockInvest/OneAI 재사용
-  engine/          mockExecutionEngine, submitMockSpeedOrder 팩토리 (UI에서 직접 호출 금지 권장)
+  engine/          mockExecutionEngine, submitMockSpeedOrder 팩토리; `index.ts` 배럴 (UI에서 직접 호출 금지 권장)
   store/
     boot.ts        초기 심볼·호가·포지션 부트스트랩
     slices/        symbol+market, order, position, ui+risk 슬라이스
@@ -37,6 +38,8 @@ src/
     tradingStoreTypes.ts  스토어 전체 타입(슬라이스 합성 계약)
     mockExecution.ts      엔진으로의 re-export (레거시 경로 호환)
   hooks/           useMockRealtime (mock tick)
+  selftest/        runSpeedOrderSelfTest, speedOrderSelfTestCoreAdapter (@tetherget/self-test-core), feature flags, audit trail, UI store
+  components/selftest/  SelfTestCenter, DiagnosticsPanel
   mock/            mockData, mockSimulate
   types/           trading, symbol
   utils/           safe*, format*, rounding, margin
@@ -121,6 +124,12 @@ stateDiagram-v2
 
 - `hooks/useMockRealtime.ts` → `simulateTick(store.symbol, lastPrice, tickers)` — 활성 심볼 호가만 해당 `SymbolSpec`으로 재생성, 동명 티커 가격은 `lastPrice`와 동기. 인터벌은 **450ms ~ 5000ms**로 클램프되어 과도한 틱을 방지합니다.
 - 프로덕션에서는 이 훅을 제거하고, 동일한 스토어 액션을 **WebSocket 핸들러**에서 호출하면 됩니다.
+
+## Self-Test (mock diagnostics)
+
+- **UI**: 좌하단 `Self-Test` → Self-Test Center (PASS/WARN/FAIL, issue count, last checked, Mock only 배지).
+- **코드**: `src/selftest/` — websocket/실거래 없이 스토어·vendor·플래그 검증. Audit trail는 **`@tetherget/mock-audit-core`** (`auditTrail.ts`, max 500 ring)으로 filter/export/trim 공통화(Phase **3-D**); `DiagnosticsPanel`·`SelfTestAuditEntry` 필드는 동일.
+- **CI/로컬**: `npm run smoke` — FAIL 시 exit 1. 상세는 [docs/SELF_TEST.md](docs/SELF_TEST.md).
 
 ## WebSocket 연결 포인트
 

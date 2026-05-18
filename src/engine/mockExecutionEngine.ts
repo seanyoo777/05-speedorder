@@ -1,5 +1,6 @@
 import type { SymbolSpec } from '../types/symbol'
-import type { OrderSide, PositionRow, TradeFillRow } from '../types/trading'
+import type { OrderSide, PositionRow, PositionSide, TradeFillRow } from '../types/trading'
+import { tradingAssetCategory } from '../domain/assetCategory'
 import { getSymbolSpec } from '../symbols/registry'
 import { calculateMarginBySpec, calculatePnlBySpec, feeNotionalAbsBySpec } from '../utils/specInstrument'
 import { safeArray } from '../utils/safe'
@@ -273,9 +274,166 @@ export function executeNetSpeedFill(input: {
   return { positions: replaceBySymbol(list, symbol, pos), fill: makeFill(netDelta) }
 }
 
+/** 헤지 모드: 심볼당 롱·숏 동시 보유 (mock, Bitget식 단순화) */
+export function positionRowIdHedge(symbol: string, leg: PositionSide): string {
+  return `pos-${symbol}-${leg}`
+}
+
+export function executeHedgeSpeedFill(input: {
+  positions: PositionRow[]
+  symbol: string
+  side: OrderSide
+  quantity: number
+  price: number
+  fillId: string
+  timestamp: number
+}): { positions: PositionRow[]; fill: TradeFillRow } {
+  const { symbol, side, quantity, price, fillId, timestamp } = input
+  const spec = getSymbolSpec(symbol)
+  const qty = Number.isFinite(quantity) && quantity > 0 ? quantity : 0
+  const px = Number.isFinite(price) && price > 0 ? price : 0
+  if (qty <= 0 || px <= 0) {
+    const emptyFill: TradeFillRow = {
+      id: fillId,
+      symbol,
+      side,
+      price: px,
+      quantity: 0,
+      fee: 0,
+      realizedPnl: 0,
+      time: new Date(timestamp).toLocaleTimeString('ko-KR', { hour12: false }),
+      timestamp,
+    }
+    return { positions: safeArray(input.positions), fill: emptyFill }
+  }
+
+  const notional = feeNotionalAbsBySpec(spec, px, qty)
+  const feeTotal = estimateTradeFee(notional)
+  const time = new Date(timestamp).toLocaleTimeString('ko-KR', { hour12: false })
+
+  const makeFill = (realizedDelta: number): TradeFillRow => ({
+    id: fillId,
+    symbol,
+    side,
+    price: px,
+    quantity: qty,
+    fee: feeTotal,
+    realizedPnl: realizedDelta,
+    time,
+    timestamp,
+  })
+
+  let list = [...safeArray(input.positions)]
+  const getLeg = (leg: PositionSide) => list.find((p) => p.symbol === symbol && p.side === leg)
+  const delLeg = (leg: PositionSide) => {
+    list = list.filter((p) => !(p.symbol === symbol && p.side === leg))
+  }
+  const putLeg = (row: PositionRow | null) => {
+    if (row == null || !Number.isFinite(row.size) || row.size <= 0) return
+    delLeg(row.side)
+    list = [...list, row]
+  }
+
+  let remain = qty
+  let grossClose = 0
+
+  if (side === 'buy') {
+    const sp = getLeg('short')
+    if (sp && sp.size > 0) {
+      const dq = Math.min(remain, sp.size)
+      const g = calculatePnlBySpec(spec, {
+        op: 'close_gross',
+        positionSide: 'short',
+        avgPrice: sp.avgPrice,
+        closePrice: px,
+        closeQty: dq,
+      })
+      grossClose += g
+      const ns = sp.size - dq
+      remain -= dq
+      if (ns <= 0) delLeg('short')
+      else putLeg({ ...sp, size: ns, realizedPnl: sp.realizedPnl })
+    }
+    if (remain > 0) {
+      const lp = getLeg('long')
+      if (!lp) {
+        putLeg({
+          id: positionRowIdHedge(symbol, 'long'),
+          symbol,
+          side: 'long',
+          size: remain,
+          avgPrice: px,
+          unrealizedPnl: 0,
+          realizedPnl: 0,
+          returnPct: 0,
+        })
+      } else {
+        const newSize = lp.size + remain
+        const newAvg = calculateAveragePrice(lp.avgPrice, lp.size, px, remain)
+        putLeg({ ...lp, size: newSize, avgPrice: newAvg, realizedPnl: lp.realizedPnl })
+      }
+    }
+  } else {
+    const lp = getLeg('long')
+    if (lp && lp.size > 0) {
+      const dq = Math.min(remain, lp.size)
+      const g = calculatePnlBySpec(spec, {
+        op: 'close_gross',
+        positionSide: 'long',
+        avgPrice: lp.avgPrice,
+        closePrice: px,
+        closeQty: dq,
+      })
+      grossClose += g
+      const ns = lp.size - dq
+      remain -= dq
+      if (ns <= 0) delLeg('long')
+      else putLeg({ ...lp, size: ns, realizedPnl: lp.realizedPnl })
+    }
+    if (remain > 0) {
+      const sp = getLeg('short')
+      if (!sp) {
+        putLeg({
+          id: positionRowIdHedge(symbol, 'short'),
+          symbol,
+          side: 'short',
+          size: remain,
+          avgPrice: px,
+          unrealizedPnl: 0,
+          realizedPnl: 0,
+          returnPct: 0,
+        })
+      } else {
+        const newSize = sp.size + remain
+        const newAvg = calculateAveragePrice(sp.avgPrice, sp.size, px, remain)
+        putLeg({ ...sp, size: newSize, avgPrice: newAvg, realizedPnl: sp.realizedPnl })
+      }
+    }
+  }
+
+  const fillRealized = grossClose - feeTotal
+  return { positions: list, fill: makeFill(fillRealized) }
+}
+
+export type SpeedFillPositionMode = 'one_way' | 'hedge'
+
+export function executeSpeedOrderFill(
+  input: Parameters<typeof executeNetSpeedFill>[0] & {
+    positionMode?: SpeedFillPositionMode
+  },
+): ReturnType<typeof executeNetSpeedFill> {
+  const spec = getSymbolSpec(input.symbol)
+  const cat = tradingAssetCategory(spec)
+  const mode = input.positionMode ?? 'one_way'
+  if (cat === 'crypto' && mode === 'hedge') {
+    return executeHedgeSpeedFill(input)
+  }
+  return executeNetSpeedFill(input)
+}
+
 /** 체결 1건을 넷 포지션에 반영 — `executeNetSpeedFill`과 동일 (호스트 재사용용 별칭) */
 export function applyFillToPosition(
-  input: Parameters<typeof executeNetSpeedFill>[0],
-): ReturnType<typeof executeNetSpeedFill> {
-  return executeNetSpeedFill(input)
+  input: Parameters<typeof executeSpeedOrderFill>[0],
+): ReturnType<typeof executeSpeedOrderFill> {
+  return executeSpeedOrderFill(input)
 }

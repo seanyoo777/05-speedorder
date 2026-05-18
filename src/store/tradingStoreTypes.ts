@@ -1,6 +1,7 @@
 import type { StoreApi } from 'zustand'
 import type { OrderBookDesignPresetId } from '../config/orderBookDesignPresets'
 import type { RiskSnapshot } from '../domain/risk'
+import type { StopMitDraft, StopMitDraftPatch } from '../domain/stopMitDraft'
 import type {
   ConditionalOrderKind,
   ConditionalOrderRow,
@@ -38,6 +39,10 @@ export type TradingStoreState = {
   orderBookPendingLimitPrice: number | null
   /** MIT·스탑 트리거에 1회 주입(호가 클릭 시 고정, 실시간 시세와 무관) */
   orderBookPendingTriggerPrice: number | null
+  /** pending 트리거와 함께 설정되는 호가 측 (bid/ask) */
+  orderBookPendingTriggerBookSide: 'bid' | 'ask' | null
+  /** Stop/MIT 가격 락 초안 (틱·lastPrice와 분리) */
+  stopMitDraft: StopMitDraft
   /** 호가 행 선택 강조 (가격) */
   orderBookHighlightPrice: number | null
   /** 호가 디자인 프리셋 (localStorage 동기) */
@@ -54,6 +59,15 @@ export type TradingStoreState = {
   uiDomWidthPx: number | null
   /** 최근 주문·스킵 UX 로그 (최대 5) */
   orderActionLog: SpeedOrderActionLogEntry[]
+  /** 코인 포지션 모드 (mock, 향후 사용자/관리자 설정 확장) */
+  cryptoPositionMode: 'one_way' | 'hedge'
+  /** 호가 더블클릭 → HTS 확인 모달용 (mock) */
+  pendingBookOrderConfirm: null | {
+    id: string
+    side: OrderSide
+    rowPrice: number
+    quantity: number
+  }
 }
 
 export type TradingStoreActions = {
@@ -85,7 +99,11 @@ export type TradingStoreActions = {
   setOrderBookPendingLimitPrice: (price: number | null) => void
   clearOrderBookPendingLimitPrice: () => void
   setOrderBookPendingTriggerPrice: (price: number | null) => void
+  setOrderBookPendingTriggerBookSide: (side: 'bid' | 'ask' | null) => void
   clearOrderBookPendingTriggerPrice: () => void
+  patchStopMitDraft: (patch: StopMitDraftPatch) => void
+  consumeOrderBookPendingTrigger: () => boolean
+  resetStopMitDraftForSymbol: (symbol: string) => void
   setOrderBookHighlightPrice: (price: number | null) => void
   setOrderBookDesignPreset: (id: OrderBookDesignPresetId) => void
   setOrderBookColorInvert: (v: boolean) => void
@@ -94,6 +112,10 @@ export type TradingStoreActions = {
   setUiCompactMode: (v: boolean) => void
   setUiDomWidthPx: (v: number | null) => void
   pushOrderActionLog: (e: { kind: SpeedOrderActionKind; text: string; id?: string }) => void
+  setCryptoPositionMode: (m: 'one_way' | 'hedge') => void
+  setPendingBookOrderConfirm: (
+    v: null | { id: string; side: OrderSide; rowPrice: number; quantity: number },
+  ) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions

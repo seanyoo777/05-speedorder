@@ -4,9 +4,11 @@ export const UI_FONT_SCALE_LS_KEY = '05-speedorder:font-scale'
 export const UI_ORDERBOOK_FONT_SCALE_LS_KEY = '05-speedorder:orderbook-font-scale'
 export const UI_COMPACT_MODE_LS_KEY = '05-speedorder:compact-mode'
 export const UI_DOM_WIDTH_LS_KEY = '05-speedorder:dom-width'
+export const UI_CRYPTO_POSITION_MODE_LS_KEY = '05-speedorder:crypto-position-mode'
 
-const DEFAULT_FONT = 1
-const DEFAULT_OB_FONT = 1
+/** LS 미설정 시 한 단계(0.05) 키운 기본값 */
+const DEFAULT_FONT = 1.05
+const DEFAULT_OB_FONT = 1.05
 const MIN_S = 0.8
 const MAX_S = 1.25
 
@@ -49,4 +51,14 @@ export function readDomWidthFromLs(): number | null {
     /* ignore */
   }
   return null
+}
+
+export function readCryptoPositionModeFromLs(): 'one_way' | 'hedge' {
+  try {
+    const r = localStorage.getItem(UI_CRYPTO_POSITION_MODE_LS_KEY)
+    if (r === 'hedge') return 'hedge'
+  } catch {
+    /* ignore */
+  }
+  return 'one_way'
 }

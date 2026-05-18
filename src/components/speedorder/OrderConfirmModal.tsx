@@ -11,6 +11,10 @@ export type OrderConfirmDraft = {
   quantity: number
   qtyDecimals: number
   estimatedMargin: number
+  /** standard: 일반 주문 / book_dblclick: 호가 더블클릭 / mit_register / stop_register */
+  flow?: 'standard' | 'book_dblclick' | 'mit_register' | 'stop_register'
+  /** 호가 행 가격 등 부가 설명 */
+  rowPriceHint?: string
 }
 
 type Props = {
@@ -22,6 +26,16 @@ type Props = {
 
 export function OrderConfirmModal({ open, draft, onClose, onConfirm }: Props) {
   if (!open || !draft) return null
+
+  const flow = draft.flow ?? 'standard'
+  const title =
+    flow === 'book_dblclick'
+      ? '호가 주문 확인 (모의)'
+      : flow === 'mit_register'
+        ? 'MIT 주문 확인 (모의)'
+        : flow === 'stop_register'
+          ? '스탑로스 확인 (모의)'
+          : '주문 확인 (모의)'
 
   return (
     <div
@@ -38,10 +52,16 @@ export function OrderConfirmModal({ open, draft, onClose, onConfirm }: Props) {
         aria-labelledby="order-confirm-title"
       >
         <h3 id="order-confirm-title" className="text-sm font-semibold text-white">
-          주문 확인 (모의)
+          {title}
         </h3>
         <p className="mt-1 text-[11px] text-so-muted">실거래 연결 없음 · 데모 전용</p>
         <dl className="mt-4 space-y-2 text-[12px]">
+          {draft.rowPriceHint ? (
+            <div className="flex justify-between gap-2">
+              <dt className="text-so-muted">호가</dt>
+              <dd className="font-mono text-white">{draft.rowPriceHint}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-2">
             <dt className="text-so-muted">심볼</dt>
             <dd className="font-mono text-white">
@@ -69,10 +89,12 @@ export function OrderConfirmModal({ open, draft, onClose, onConfirm }: Props) {
             <dt className="text-so-muted">수량</dt>
             <dd className="font-mono text-white">{formatByDecimals(draft.quantity, draft.qtyDecimals)}</dd>
           </div>
-          <div className="flex justify-between gap-2 border-t border-so-border pt-2">
-            <dt className="text-so-muted">예상 증거금</dt>
-            <dd className="font-mono text-so-accent">≈ ${formatPrice(draft.estimatedMargin, 2)}</dd>
-          </div>
+          {flow === 'standard' ? (
+            <div className="flex justify-between gap-2 border-t border-so-border pt-2">
+              <dt className="text-so-muted">예상 증거금</dt>
+              <dd className="font-mono text-so-accent">≈ ${formatPrice(draft.estimatedMargin, 2)}</dd>
+            </div>
+          ) : null}
         </dl>
         <div className="mt-5 flex gap-2">
           <button

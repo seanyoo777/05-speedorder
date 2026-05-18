@@ -37,6 +37,12 @@ export type TradeFillRow = {
   realizedPnl: number
   time: string
   timestamp: number
+  /** 주문 유형 (체결 패널 표시용, mock) */
+  orderKind?: 'market' | 'limit' | 'mit' | 'stop'
+  /** 구분 라벨: 현물/선물/코인 등 */
+  segmentLabel?: string
+  /** 체결 상태 표기 */
+  statusLabel?: string
 }
 
 /** 모의 주문 라이프사이클 (persisted row에는 idle 미사용) */

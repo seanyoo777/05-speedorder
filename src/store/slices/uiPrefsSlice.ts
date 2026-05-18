@@ -1,10 +1,12 @@
 import type { StateCreator } from 'zustand'
 import {
   UI_COMPACT_MODE_LS_KEY,
+  UI_CRYPTO_POSITION_MODE_LS_KEY,
   UI_DOM_WIDTH_LS_KEY,
   UI_FONT_SCALE_LS_KEY,
   UI_ORDERBOOK_FONT_SCALE_LS_KEY,
   readCompactModeFromLs,
+  readCryptoPositionModeFromLs,
   readDomWidthFromLs,
   readFontScaleFromLs,
   readOrderBookFontScaleFromLs,
@@ -25,12 +27,15 @@ export const createUiPrefsSlice: StateCreator<
     | 'setUiOrderBookFontScale'
     | 'setUiCompactMode'
     | 'setUiDomWidthPx'
+    | 'cryptoPositionMode'
+    | 'setCryptoPositionMode'
   >
 > = (set) => ({
   uiFontScale: readFontScaleFromLs(),
   uiOrderBookFontScale: readOrderBookFontScaleFromLs(),
   uiCompactMode: readCompactModeFromLs(),
   uiDomWidthPx: readDomWidthFromLs(),
+  cryptoPositionMode: readCryptoPositionModeFromLs(),
 
   setUiFontScale: (uiFontScale) => {
     const v = Number(uiFontScale)
@@ -71,5 +76,15 @@ export const createUiPrefsSlice: StateCreator<
       /* ignore */
     }
     set({ uiDomWidthPx: uiDomWidthPx == null ? null : Math.round(uiDomWidthPx) })
+  },
+
+  setCryptoPositionMode: (cryptoPositionMode) => {
+    const m = cryptoPositionMode === 'hedge' ? 'hedge' : 'one_way'
+    try {
+      localStorage.setItem(UI_CRYPTO_POSITION_MODE_LS_KEY, m)
+    } catch {
+      /* ignore */
+    }
+    set({ cryptoPositionMode: m })
   },
 })

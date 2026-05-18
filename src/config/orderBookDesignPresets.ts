@@ -22,7 +22,7 @@ export type OrderBookPresetTag = 'compact' | 'pro'
 /** 코인 거래소 DOM 기본: 매수측(비드) 차분 그린, 매도측(애스크) 차분 레드 */
 const DOM_ROW_BORDER = 'border-[#1f2937]/30'
 const DOM_CENTER =
-  'rounded-[6px] border border-[#1f2937]/30 bg-[#0b1118] px-2 py-2.5 shadow-[inset_0_0_28px_-10px_rgba(139,92,246,0.14),inset_0_1px_0_0_rgba(139,92,246,0.06)] ring-1 ring-inset ring-violet-500/15'
+  'rounded-[6px] border border-[#1f2937]/35 bg-[#0b1118] px-2 py-2.5 shadow-[inset_0_0_38px_-8px_rgba(139,92,246,0.22),inset_0_1px_0_0_rgba(216,201,255,0.1)] ring-1 ring-inset ring-violet-400/22'
 
 export type OrderBookVisualTokens = {
   bidPriceClass: string
@@ -56,16 +56,17 @@ const KOREAN: OrderBookVisualTokens = {
   askDepthClass: 'bg-rose-600/10',
   bidDepthRgb: '16, 185, 129',
   askDepthRgb: '225, 29, 72',
-  rowHeightClass: 'h-[20px] min-h-[19px]',
-  rowFontClass: 'text-[10px] sm:text-[11px] leading-none tabular-nums tracking-tight',
-  headerFontClass: 'text-[9px] sm:text-[10px] tabular-nums text-zinc-500',
+  rowHeightClass: 'h-[21px] min-h-[20px]',
+  rowFontClass: 'text-[11px] sm:text-[12px] leading-none tabular-nums tracking-tight',
+  headerFontClass: 'text-[10px] sm:text-[11px] tabular-nums text-zinc-500',
   rowDivideClass: 'divide-y divide-[#1f2937]/25',
   borderClass: DOM_ROW_BORDER,
   centerBgClass: 'bg-[#070b12]',
   centerMutedClass: 'text-zinc-500',
   centerShellClass: DOM_CENTER,
-  centerPriceFontClass: 'text-[16px] sm:text-[18px] font-bold tabular-nums tracking-tight',
-  centerMetaFontClass: 'text-[8px] sm:text-[9px] tabular-nums text-zinc-500',
+  centerPriceFontClass:
+    'text-[17px] sm:text-[20px] font-extrabold tabular-nums tracking-tight text-zinc-50 antialiased [text-shadow:0_1px_0_rgba(0,0,0,0.6),0_0_22px_rgba(167,139,250,0.14)]',
+  centerMetaFontClass: 'text-[9px] sm:text-[10px] tabular-nums text-zinc-500',
   rowCellPaddingClass: 'px-1',
   priceUpClass: 'text-emerald-400/95',
   priceDownClass: 'text-rose-400/95',
@@ -80,20 +81,22 @@ const KOREAN_PRO: OrderBookVisualTokens = {
   askPriceClass: 'text-rose-400/90',
   bidDepthRgb: '52, 211, 153',
   askDepthRgb: '244, 63, 94',
-  rowHeightClass: 'h-[19px] min-h-[18px]',
-  rowFontClass: 'text-[10px] leading-none tabular-nums tracking-tight font-medium',
-  centerPriceFontClass: 'text-[17px] sm:text-[19px] font-bold tabular-nums tracking-tight',
-  centerMetaFontClass: 'text-[8px] tabular-nums',
+  rowHeightClass: 'h-[20px] min-h-[19px]',
+  rowFontClass: 'text-[11px] leading-none tabular-nums tracking-tight font-medium',
+  centerPriceFontClass:
+    'text-[18px] sm:text-[21px] font-extrabold tabular-nums tracking-tight text-zinc-50 antialiased [text-shadow:0_1px_0_rgba(0,0,0,0.58),0_0_22px_rgba(167,139,250,0.15)]',
+  centerMetaFontClass: 'text-[9px] tabular-nums',
 }
 
 const ULTRA_COMPACT: OrderBookVisualTokens = {
   ...KOREAN,
-  rowHeightClass: 'h-[17px] min-h-[16px]',
-  rowFontClass: 'text-[9px] leading-none tabular-nums tracking-tight',
-  headerFontClass: 'text-[8px] tabular-nums text-zinc-500',
+  rowHeightClass: 'h-[18px] min-h-[17px]',
+  rowFontClass: 'text-[10px] leading-none tabular-nums tracking-tight',
+  headerFontClass: 'text-[9px] tabular-nums text-zinc-500',
   rowCellPaddingClass: 'px-0.5',
-  centerPriceFontClass: 'text-[14px] sm:text-[15px] font-bold tabular-nums',
-  centerMetaFontClass: 'text-[7px] tabular-nums',
+  centerPriceFontClass:
+    'text-[15px] sm:text-[17px] font-extrabold tabular-nums text-zinc-50 antialiased [text-shadow:0_1px_0_rgba(0,0,0,0.58)]',
+  centerMetaFontClass: 'text-[8px] tabular-nums',
   centerShellClass: `${DOM_CENTER} py-2`,
 }
 
@@ -113,15 +116,16 @@ const HIGH_CONTRAST: OrderBookVisualTokens = {
   bidDepthRgb: '74, 222, 128',
   askDepthRgb: '251, 113, 133',
   rowHeightClass: 'h-[21px] min-h-[20px]',
-  rowFontClass: 'text-[10px] sm:text-[11px] font-semibold leading-none tabular-nums',
+  rowFontClass: 'text-[11px] sm:text-[12px] font-semibold leading-none tabular-nums',
   headerFontClass: 'text-[9px] font-semibold tabular-nums text-zinc-400',
   rowDivideClass: 'divide-y divide-[#1f2937]/50',
   borderClass: 'border-[#1f2937]/55',
   centerBgClass: 'bg-[#05080d]',
   centerMutedClass: 'text-zinc-400',
   centerShellClass: `${DOM_CENTER} ring-violet-400/20 border-violet-900/30`,
-  centerPriceFontClass: 'text-[17px] sm:text-[19px] font-bold tabular-nums',
-  centerMetaFontClass: 'text-[8px] tabular-nums',
+  centerPriceFontClass:
+    'text-[18px] sm:text-[21px] font-extrabold tabular-nums text-white antialiased [text-shadow:0_1px_0_rgba(0,0,0,0.65),0_0_18px_rgba(167,139,250,0.12)]',
+  centerMetaFontClass: 'text-[9px] tabular-nums',
   rowCellPaddingClass: 'px-1',
   priceUpClass: 'text-emerald-300',
   priceDownClass: 'text-rose-300',
@@ -145,8 +149,9 @@ const MINIMAL_DARK: OrderBookVisualTokens = {
   centerBgClass: 'bg-[#070b12]',
   centerMutedClass: 'text-zinc-600',
   centerShellClass: 'rounded-sm border border-[#1f2937] bg-[#0b1118] px-1.5 py-2 ring-1 ring-inset ring-violet-500/8',
-  centerPriceFontClass: 'text-[14px] sm:text-[16px] font-semibold tabular-nums',
-  centerMetaFontClass: 'text-[8px] tabular-nums',
+  centerPriceFontClass:
+    'text-[15px] sm:text-[17px] font-bold tabular-nums text-zinc-50 antialiased [text-shadow:0_1px_0_rgba(0,0,0,0.65)]',
+  centerMetaFontClass: 'text-[9px] tabular-nums',
   rowCellPaddingClass: 'px-0.5',
   priceUpClass: 'text-violet-300/95',
   priceDownClass: 'text-zinc-400',

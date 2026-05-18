@@ -5,11 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build --prefix ../packages/self-test-core && npm run build --prefix ../packages/mock-audit-core",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pretest": "npm run build --prefix ../packages/self-test-core && npm run build --prefix ../packages/mock-audit-core",
+    "test": "vitest run src/selftest && tsx scripts/smoke.ts",
+    "test:unit": "vitest run src/selftest",
+    "presmoke": "npm run build --prefix ../packages/self-test-core && npm run build --prefix ../packages/mock-audit-core",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
+    "@tetherget/self-test-core": "file:../packages/self-test-core",
+    "@tetherget/mock-audit-core": "file:../packages/mock-audit-core",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "zustand": "^5.0.13"
@@ -26,7 +34,9 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.21.0",
     "typescript": "~6.0.2",
+    "vitest": "^3.2.4",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
   }

@@ -47,6 +47,7 @@ export const createSymbolMarketSlice: StateCreator<
         riskSnapshot: mergeRiskSnapshotWithPositions(positions, s.riskSnapshot),
       }
     })
+    get().resetStopMitDraftForSymbol(sym)
   },
 
   applyOrderBook: (orderBook) =>
@@ -72,6 +73,7 @@ export const createSymbolMarketSlice: StateCreator<
           conditionalOrders: s.conditionalOrders,
           tickers: tickersArr,
           riskSnapshot: mergeRiskSnapshotWithPositions(positions, s.riskSnapshot),
+          cryptoPositionMode: s.cryptoPositionMode,
         },
         prevLp,
         price,
@@ -125,6 +127,7 @@ export const createSymbolMarketSlice: StateCreator<
           conditionalOrders: s.conditionalOrders,
           tickers: tickersArr,
           riskSnapshot: mergeRiskSnapshotWithPositions(positions, s.riskSnapshot),
+          cryptoPositionMode: s.cryptoPositionMode,
         },
         prevLp,
         lastPrice,

@@ -13,9 +13,13 @@ export {
   calculateRealizedPnlLongClose,
   calculateRealizedPnlShortClose,
   positionRowId,
+  positionRowIdHedge,
   partialClosePosition,
   reversePosition,
   revaluePositions,
   executeNetSpeedFill,
+  executeHedgeSpeedFill,
+  executeSpeedOrderFill,
   applyFillToPosition,
 } from '../engine/mockExecutionEngine'
+export type { SpeedFillPositionMode } from '../engine/mockExecutionEngine'
