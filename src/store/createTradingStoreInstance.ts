@@ -4,6 +4,7 @@ import { createOrderActionLogSlice } from './slices/orderActionLogSlice'
 import { createOrderBookUiSlice } from './slices/orderBookUiSlice'
 import { createOrderSlice } from './slices/orderSlice'
 import { createPositionSlice } from './slices/positionSlice'
+import { createPositionCloseSlice } from './slices/positionCloseSlice'
 import { createSymbolMarketSlice } from './slices/symbolMarketSlice'
 import { createStopMitDraftSlice } from './slices/stopMitDraftSlice'
 import { createWorkspaceRuntimeSlice } from './slices/workspaceRuntimeSlice'
@@ -17,6 +18,7 @@ export function createTradingStoreInstance(): import('zustand').StoreApi<Trading
     ...createSymbolMarketSlice(...args),
     ...createOrderSlice(...args),
     ...createPositionSlice(...args),
+    ...createPositionCloseSlice(...args),
     ...createUiRiskSlice(...args),
     ...createOrderActionLogSlice(...args),
     ...createConditionalOrderSlice(...args),

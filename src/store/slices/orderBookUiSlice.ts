@@ -5,6 +5,14 @@ import {
   readOrderBookInvertFromLs,
   readOrderBookPresetFromLs,
 } from '../../config/orderBookDesignPresets'
+import {
+  ORDER_BOOK_ROW_DENSITY_LS_KEY,
+  ORDER_BOOK_STYLE_LS_KEY,
+  readOrderBookRowDensityFromLs,
+  readOrderBookStyleFromLs,
+  type OrderBookRowDensityId,
+  type OrderBookStyleId,
+} from '../../config/orderBookStyle'
 import type { OrderBookDesignPresetId } from '../../config/orderBookDesignPresets'
 import type { OrderSide } from '../../types/trading'
 import type { TradingStore } from '../tradingStoreTypes'
@@ -26,6 +34,8 @@ export const createOrderBookUiSlice: StateCreator<
     | 'orderBookHighlightPrice'
     | 'orderBookDesignPreset'
     | 'orderBookColorInvert'
+    | 'orderBookStyle'
+    | 'orderBookRowDensity'
     | 'setOrderBookOrderQty'
     | 'setOrderBookOneClickEnabled'
     | 'setOrderBookDoubleClickEnabled'
@@ -37,6 +47,8 @@ export const createOrderBookUiSlice: StateCreator<
     | 'setOrderBookHighlightPrice'
     | 'setOrderBookDesignPreset'
     | 'setOrderBookColorInvert'
+    | 'setOrderBookStyle'
+    | 'setOrderBookRowDensity'
     | 'pendingBookOrderConfirm'
     | 'setPendingBookOrderConfirm'
   >
@@ -50,6 +62,8 @@ export const createOrderBookUiSlice: StateCreator<
   orderBookHighlightPrice: null as number | null,
   orderBookDesignPreset: readOrderBookPresetFromLs(),
   orderBookColorInvert: readOrderBookInvertFromLs(),
+  orderBookStyle: readOrderBookStyleFromLs(),
+  orderBookRowDensity: readOrderBookRowDensityFromLs(),
   pendingBookOrderConfirm: null as null | {
     id: string
     side: OrderSide
@@ -96,6 +110,24 @@ export const createOrderBookUiSlice: StateCreator<
       /* ignore */
     }
     set({ orderBookColorInvert: v })
+  },
+
+  setOrderBookStyle: (id: OrderBookStyleId) => {
+    try {
+      localStorage.setItem(ORDER_BOOK_STYLE_LS_KEY, id)
+    } catch {
+      /* ignore */
+    }
+    set({ orderBookStyle: id })
+  },
+
+  setOrderBookRowDensity: (id: OrderBookRowDensityId) => {
+    try {
+      localStorage.setItem(ORDER_BOOK_ROW_DENSITY_LS_KEY, id)
+    } catch {
+      /* ignore */
+    }
+    set({ orderBookRowDensity: id })
   },
 
   setPendingBookOrderConfirm: (pendingBookOrderConfirm) => set({ pendingBookOrderConfirm }),

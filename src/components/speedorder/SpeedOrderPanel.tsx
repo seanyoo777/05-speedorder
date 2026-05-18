@@ -9,6 +9,7 @@ import { formatByDecimals } from '../../utils/format'
 import { estimateInitialMarginUsdt } from '../../utils/margin'
 import { roundPriceBySpec, roundQtyBySpec } from '../../utils/specInstrument'
 import { PanelShell } from '../common/PanelShell'
+import { useTgxFormRhythm } from '../orderform/useTgxFormRhythm'
 import { RecentOrderActionsLog } from './RecentOrderActionsLog'
 import { OrderConfirmModal, type OrderConfirmDraft } from './OrderConfirmModal'
 
@@ -34,6 +35,7 @@ export function SpeedOrderPanel() {
 
   const spec = getSymbolSpec(symbol)
   const busy = mockOrderInFlightId != null
+  const { cx } = useTgxFormRhythm()
 
   const prevSymRef = useRef(useTradingStore.getState().symbol)
 
@@ -140,7 +142,7 @@ export function SpeedOrderPanel() {
 
   return (
     <PanelShell
-      title={`원클릭 주문 · ${symbol}`}
+      title={`스피드 주문 · ${symbol}`}
       action={
         <label className="flex items-center gap-1 text-[10px] text-so-muted">
           <input
@@ -161,26 +163,26 @@ export function SpeedOrderPanel() {
         }}
         onConfirm={runSubmit}
       />
-      <div className="space-y-3 p-3 text-xs">
+      <div className={`${cx.stack} ${cx.panelPad}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex rounded-md border border-so-border p-0.5">
+          <div className="flex rounded border border-[#1f2937]/50 bg-[#0b1118] p-0.5">
             <button
               type="button"
-              className={`rounded px-2 py-1 ${!beginnerMode ? 'bg-so-border text-white' : 'text-so-muted'}`}
+              className={`${cx.chipBtn} ${!beginnerMode ? 'bg-[#1f2937]/80 text-zinc-100' : 'text-zinc-500'}`}
               onClick={() => setBeginnerMode(false)}
             >
               전문가
             </button>
             <button
               type="button"
-              className={`rounded px-2 py-1 ${beginnerMode ? 'bg-so-border text-white' : 'text-so-muted'}`}
+              className={`${cx.chipBtn} ${beginnerMode ? 'bg-[#1f2937]/80 text-zinc-100' : 'text-zinc-500'}`}
               onClick={() => setBeginnerMode(true)}
             >
               초보자
             </button>
           </div>
           <select
-            className="max-w-[140px] rounded-md border border-so-border bg-so-bg px-2 py-1 font-mono text-[11px] text-white"
+            className={`${cx.input} max-w-[140px]`}
             value={symbol}
             disabled={busy}
             onChange={(e) => {
@@ -198,12 +200,14 @@ export function SpeedOrderPanel() {
         </div>
 
         {!beginnerMode ? (
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               type="button"
               disabled={busy}
-              className={`flex-1 rounded-md border py-1.5 ${
-                orderType === 'market' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'
+              className={`${cx.segmentBtn} border ${
+                orderType === 'market'
+                  ? 'border-violet-500/45 bg-violet-500/15 text-violet-100'
+                  : 'border-[#1f2937]/50 text-zinc-500'
               }`}
               onClick={() => setOrderType('market')}
             >
@@ -212,8 +216,10 @@ export function SpeedOrderPanel() {
             <button
               type="button"
               disabled={busy}
-              className={`flex-1 rounded-md border py-1.5 ${
-                orderType === 'limit' ? 'border-so-accent bg-so-accent/15' : 'border-so-border'
+              className={`${cx.segmentBtn} border ${
+                orderType === 'limit'
+                  ? 'border-violet-500/45 bg-violet-500/15 text-violet-100'
+                  : 'border-[#1f2937]/50 text-zinc-500'
               }`}
               onClick={() => setOrderType('limit')}
             >
@@ -221,16 +227,16 @@ export function SpeedOrderPanel() {
             </button>
           </div>
         ) : (
-          <p className="rounded-md border border-dashed border-so-border px-2 py-2 text-so-muted">
+          <p className={`rounded border border-dashed border-[#1f2937]/50 px-2 py-1.5 ${cx.meta}`}>
             초보자 모드: 시장가만 표시됩니다. (구조 분리용 플래그)
           </p>
         )}
 
         {!beginnerMode && orderType === 'limit' ? (
-          <label className="block text-so-muted">
+          <label className={`block ${cx.label}`}>
             지정가
             <input
-              className="mt-1 w-full rounded-md border border-so-border bg-so-bg px-2 py-1.5 font-mono text-white"
+              className={`mt-0.5 ${cx.input}`}
               type="number"
               disabled={busy}
               value={limitPrice}
@@ -246,8 +252,10 @@ export function SpeedOrderPanel() {
                 key={q}
                 type="button"
                 disabled={busy}
-                className={`rounded border px-2 py-1 font-mono ${
-                  qty === q ? 'border-so-accent text-so-accent' : 'border-so-border text-so-muted'
+                className={`${cx.chipBtn} font-mono ${
+                  qty === q
+                    ? 'border-violet-500/45 text-violet-200'
+                    : 'border-[#1f2937]/50 text-zinc-500'
                 }`}
                 onClick={() => setQty(q)}
               >
@@ -257,10 +265,10 @@ export function SpeedOrderPanel() {
           </div>
         )}
 
-        <label className="block text-so-muted">
+        <label className={`block ${cx.label}`}>
           수량 (lot {spec.lotSize})
           <input
-            className="mt-1 w-full rounded-md border border-so-border bg-so-bg px-2 py-1.5 font-mono text-white"
+            className={`mt-0.5 ${cx.input}`}
             type="number"
             step={spec.lotSize}
             min={0}
@@ -270,27 +278,29 @@ export function SpeedOrderPanel() {
           />
         </label>
 
-        <div className="text-[11px] text-so-muted">
+        <div className={cx.meta}>
           참고가{' '}
-          <span className="font-mono text-white">{formatByDecimals(lastPrice, spec.priceDecimals)}</span>
-          {busy ? <span className="ml-2 text-so-accent">주문 처리 중…</span> : null}
+          <span className="font-mono text-zinc-200">
+            {formatByDecimals(lastPrice, spec.priceDecimals)}
+          </span>
+          {busy ? <span className="ml-2 text-violet-300">주문 처리 중…</span> : null}
         </div>
 
         {beginnerMode ? (
           <button
             type="button"
             disabled={busy}
-            className="w-full rounded-md border border-so-border py-2 text-sm font-medium disabled:opacity-50"
+            className={`${cx.primaryBtn} w-full border border-[#1f2937]/50 text-zinc-200 disabled:opacity-50`}
             onClick={() => requestSubmit('buy')}
           >
             빠른 매수 (시장가)
           </button>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
               disabled={busy}
-              className="rounded-md bg-so-bid py-2.5 text-sm font-semibold text-so-bg disabled:opacity-50"
+              className={`${cx.primaryBtn} bg-emerald-500 text-[#070b12] shadow-[0_0_12px_-4px_rgba(52,211,153,0.55)] disabled:opacity-50`}
               onClick={() => requestSubmit('buy')}
             >
               롱
@@ -298,7 +308,7 @@ export function SpeedOrderPanel() {
             <button
               type="button"
               disabled={busy}
-              className="rounded-md bg-so-ask py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className={`${cx.primaryBtn} bg-rose-500 text-white shadow-[0_0_12px_-4px_rgba(244,63,94,0.5)] disabled:opacity-50`}
               onClick={() => requestSubmit('sell')}
             >
               숏

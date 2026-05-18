@@ -18,6 +18,11 @@ export type SpeedOrderFeatureFlags = {
    * Host config alias: `speedorder.enableResearchFeedPanel`
    */
   readonly enableResearchFeedPanel: boolean
+  /**
+   * TGX-style order book panel (02-TGX-CEX reference).
+   * Host alias: `speedorder.enableTgxOrderBook`
+   */
+  readonly enableTgxOrderBook: boolean
 }
 
 export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
@@ -30,6 +35,7 @@ export const SPEED_ORDER_FEATURE_FLAGS: SpeedOrderFeatureFlags = {
   liveWebSocketRequired: false,
   stopMitPriceLockEnabled: true,
   enableResearchFeedPanel: true,
+  enableTgxOrderBook: true,
 } as const
 
 export type FeatureFlagValidation = {

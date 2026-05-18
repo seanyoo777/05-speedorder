@@ -11,8 +11,8 @@ export type OrderConfirmDraft = {
   quantity: number
   qtyDecimals: number
   estimatedMargin: number
-  /** standard: 일반 주문 / book_dblclick: 호가 더블클릭 / mit_register / stop_register */
-  flow?: 'standard' | 'book_dblclick' | 'mit_register' | 'stop_register'
+  /** standard: 일반 주문 / book_dblclick: 호가 더블클릭 / mit_register / stop_register / position_close */
+  flow?: 'standard' | 'book_dblclick' | 'mit_register' | 'stop_register' | 'position_close'
   /** 호가 행 가격 등 부가 설명 */
   rowPriceHint?: string
 }
@@ -35,7 +35,9 @@ export function OrderConfirmModal({ open, draft, onClose, onConfirm }: Props) {
         ? 'MIT 주문 확인 (모의)'
         : flow === 'stop_register'
           ? '스탑로스 확인 (모의)'
-          : '주문 확인 (모의)'
+          : flow === 'position_close'
+            ? '청산 intent 확인 (모의)'
+            : '주문 확인 (모의)'
 
   return (
     <div
@@ -109,7 +111,7 @@ export function OrderConfirmModal({ open, draft, onClose, onConfirm }: Props) {
             className="flex-1 rounded-lg bg-so-accent py-2.5 text-sm font-semibold text-white"
             onClick={onConfirm}
           >
-            확인 주문
+            {flow === 'position_close' ? '확인 (mock log)' : '확인 주문'}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { getSelfTestAuditTrail } from '../../selftest/auditTrail'
 import {
   SPEED_ORDER_FEATURE_FLAGS,
@@ -23,6 +24,9 @@ import {
   validateTradingWorkspaceCatalog,
 } from '../../domain/tradingWorkspaceCatalog'
 import { getResearchFeedDiagnostics } from '../../research/researchFeedDiagnostics'
+import { getOrderBookDiagnostics } from '../orderbook/orderBookDiagnostics'
+import { getOrderFormDiagnostics } from '../orderform/orderFormDiagnostics'
+import { getPositionCloseDiagnostics } from '../position/positionCloseDiagnostics'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from '../../selftest/types'
 
 type TabId = 'checks' | 'audit' | 'flags' | 'stopmit' | 'workspace'
@@ -114,6 +118,39 @@ export function DiagnosticsPanel() {
   const researchFeedDiagnostics = useMemo(
     () => getResearchFeedDiagnostics(activeStoreSymbol),
     [activeStoreSymbol],
+  )
+  const orderBookStyle = useTradingStore((s) => s.orderBookStyle)
+  const orderBookRowDensity = useTradingStore((s) => s.orderBookRowDensity)
+  const orderBookDiagnostics = useMemo(
+    () => getOrderBookDiagnostics({ orderBookStyle, orderBookRowDensity }),
+    [orderBookStyle, orderBookRowDensity],
+  )
+  const orderFormDiagState = useTradingStore(
+    useShallow((s) => ({
+      orderBookPendingLimitPrice: s.orderBookPendingLimitPrice,
+      orderBookPendingTriggerPrice: s.orderBookPendingTriggerPrice,
+      orderBookPendingTriggerBookSide: s.orderBookPendingTriggerBookSide,
+      orderBookHighlightPrice: s.orderBookHighlightPrice,
+      stopMitDraft: s.stopMitDraft,
+      orderBookOneClickEnabled: s.orderBookOneClickEnabled,
+      orderBookStyle: s.orderBookStyle,
+      orderBookRowDensity: s.orderBookRowDensity,
+      workspaceOrderFormTab: s.workspaceOrderFormTab,
+    })),
+  )
+  const orderFormDiagnostics = useMemo(
+    () => getOrderFormDiagnostics(orderFormDiagState),
+    [orderFormDiagState],
+  )
+  const positionCloseDiagState = useTradingStore(
+    useShallow((s) => ({
+      positionCloseIntent: s.positionCloseIntent,
+      positionCloseSelectedIds: s.positionCloseSelectedIds,
+    })),
+  )
+  const positionCloseDiagnostics = useMemo(
+    () => getPositionCloseDiagnostics(positionCloseDiagState),
+    [positionCloseDiagState],
   )
   const audit = useMemo(() => {
     void auditTick
@@ -320,6 +357,57 @@ export function DiagnosticsPanel() {
                 <span className="text-so-bid">
                   {String(researchFeedDiagnostics.researchFeedMockOnly)}
                 </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">orderBookStyle</span>
+                <span>{orderBookDiagnostics.orderBookStyle}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">tgxOrderBookEnabled</span>
+                <span>{String(orderBookDiagnostics.tgxOrderBookEnabled)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">orderBookRowDensity</span>
+                <span>
+                  {orderBookDiagnostics.orderBookRowDensity} ({orderBookDiagnostics.displayRowCount}{' '}
+                  rows)
+                </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">orderFormIntentVisible</span>
+                <span>{String(orderFormDiagnostics.orderFormIntentVisible)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">stopMitLockVisible</span>
+                <span>{String(orderFormDiagnostics.stopMitLockVisible)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">oneClickPolicy</span>
+                <span className="font-mono text-[9px]">{orderFormDiagnostics.oneClickPolicy}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">tgxFormRhythm</span>
+                <span>{orderFormDiagnostics.tgxFormRhythm}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">closeIntentActive</span>
+                <span>{String(positionCloseDiagnostics.closeIntentActive)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">closeIntentRatio</span>
+                <span>{positionCloseDiagnostics.closeIntentRatio ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">closeIntentOrderType</span>
+                <span>{positionCloseDiagnostics.closeIntentOrderType ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">selectedPositionCount</span>
+                <span>{positionCloseDiagnostics.selectedPositionCount}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">mockCloseOnly</span>
+                <span className="text-so-bid">{String(positionCloseDiagnostics.mockCloseOnly)}</span>
               </li>
             </ul>
             {activeVendorSnapshot && (

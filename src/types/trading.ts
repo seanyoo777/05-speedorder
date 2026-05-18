@@ -108,6 +108,8 @@ export type SpeedOrderActionKind =
   | 'skip_busy'
   | 'skip_qty'
   | 'skip_price'
+  | 'close_intent'
+  | 'close_confirm'
 
 export type SpeedOrderActionLogEntry = {
   id: string

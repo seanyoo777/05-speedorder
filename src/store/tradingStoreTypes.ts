@@ -1,6 +1,13 @@
 import type { StoreApi } from 'zustand'
 import type { OrderBookDesignPresetId } from '../config/orderBookDesignPresets'
+import type { OrderBookRowDensityId, OrderBookStyleId } from '../config/orderBookStyle'
 import type { RiskSnapshot } from '../domain/risk'
+import type {
+  CloseOrderType,
+  CloseRatio,
+  PositionCloseBatchMode,
+  PositionCloseIntent,
+} from '../domain/positionCloseIntent'
 import type { StopMitDraft, StopMitDraftPatch } from '../domain/stopMitDraft'
 import type {
   PositionPanelPresetId,
@@ -55,6 +62,10 @@ export type TradingStoreState = {
   orderBookDesignPreset: OrderBookDesignPresetId
   /** 매수/매도 색역 수동 반전 (프리셋 위에 추가 적용) */
   orderBookColorInvert: boolean
+  /** legacy OrderBookPanel vs TGX-style */
+  orderBookStyle: OrderBookStyleId
+  /** TGX-style row density */
+  orderBookRowDensity: OrderBookRowDensityId
   /** 스피드 주문 패널 등 기본 글자 배율 (localStorage) */
   uiFontScale: number
   /** 호가창 숫자·행 글자 배율 (localStorage) */
@@ -78,6 +89,11 @@ export type TradingStoreState = {
   workspaceOrderFormTab: WorkspaceOrderFormTab
   workspacePositionPanelPreset: PositionPanelPresetId
   workspaceLayoutPreset: WorkspaceLayoutPresetId
+  /** P3 — mock position close intent (no live execution) */
+  positionCloseIntent: PositionCloseIntent | null
+  positionCloseSelectedIds: string[]
+  positionCloseConfirmOpen: boolean
+  positionCloseOrderType: CloseOrderType
 }
 
 export type TradingStoreActions = {
@@ -96,6 +112,19 @@ export type TradingStoreActions = {
   setRiskSnapshot: (snap: RiskSnapshot) => void
   applyMockTick: (payload: { lastPrice: number; orderBook: OrderBookSnapshot; tickers: TickerRow[] }) => void
   closePositionDemo: (id: string) => void
+  setPositionCloseOrderType: (t: CloseOrderType) => void
+  togglePositionCloseSelected: (id: string) => void
+  setPositionCloseSelected: (ids: string[]) => void
+  clearPositionCloseSelection: () => void
+  stagePositionCloseIntent: (positionId: string, ratio: CloseRatio) => void
+  stageBatchPositionCloseIntent: (
+    mode: Exclude<PositionCloseBatchMode, 'single'>,
+    ratio: CloseRatio,
+  ) => void
+  setPositionCloseIntentQty: (qty: number) => void
+  clearPositionCloseIntent: () => void
+  setPositionCloseConfirmOpen: (open: boolean) => void
+  confirmPositionCloseIntent: () => boolean
   registerConditionalOrder: (input: {
     kind: ConditionalOrderKind
     side: OrderSide
@@ -117,6 +146,8 @@ export type TradingStoreActions = {
   setOrderBookHighlightPrice: (price: number | null) => void
   setOrderBookDesignPreset: (id: OrderBookDesignPresetId) => void
   setOrderBookColorInvert: (v: boolean) => void
+  setOrderBookStyle: (id: OrderBookStyleId) => void
+  setOrderBookRowDensity: (id: OrderBookRowDensityId) => void
   setUiFontScale: (v: number) => void
   setUiOrderBookFontScale: (v: number) => void
   setUiCompactMode: (v: boolean) => void
