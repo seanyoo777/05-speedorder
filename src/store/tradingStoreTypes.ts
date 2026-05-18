@@ -3,6 +3,13 @@ import type { OrderBookDesignPresetId } from '../config/orderBookDesignPresets'
 import type { RiskSnapshot } from '../domain/risk'
 import type { StopMitDraft, StopMitDraftPatch } from '../domain/stopMitDraft'
 import type {
+  PositionPanelPresetId,
+  TradingWorkspaceCategoryId,
+  WorkspaceLayoutPresetId,
+} from '../domain/tradingWorkspace'
+import type { TradingWorkspaceSlot } from '../domain/tradingWorkspace'
+import type { WorkspaceOrderFormTab } from '../workspace/applyWorkspaceSlot'
+import type {
   ConditionalOrderKind,
   ConditionalOrderRow,
   OrderBookSnapshot,
@@ -68,6 +75,15 @@ export type TradingStoreState = {
     rowPrice: number
     quantity: number
   }
+  /** W2 — active trading workspace slot (single store) */
+  activeWorkspaceId: string
+  activeWorkspaceCategoryId: TradingWorkspaceCategoryId
+  workspaceOrderFormTab: WorkspaceOrderFormTab
+  workspacePositionPanelPreset: PositionPanelPresetId
+  workspaceLayoutPreset: WorkspaceLayoutPresetId
+  workspaceUrlQueryRaw: string | null
+  workspaceUrlFallbackUsed: boolean
+  workspaceUrlInSync: boolean
 }
 
 export type TradingStoreActions = {
@@ -116,6 +132,17 @@ export type TradingStoreActions = {
   setPendingBookOrderConfirm: (
     v: null | { id: string; side: OrderSide; rowPrice: number; quantity: number },
   ) => void
+  setWorkspaceOrderFormTab: (tab: WorkspaceOrderFormTab) => void
+  setWorkspaceRuntimeFromSlot: (slot: TradingWorkspaceSlot) => void
+  activateWorkspace: (
+    workspaceId: string,
+    options?: {
+      syncUrl?: boolean
+      urlRaw?: string | null
+      historyMode?: 'replace' | 'push'
+    },
+  ) => void
+  initWorkspaceFromUrl: (search?: string) => void
 }
 
 export type TradingStore = TradingStoreState & TradingStoreActions

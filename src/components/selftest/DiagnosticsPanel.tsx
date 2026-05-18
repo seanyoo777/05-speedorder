@@ -6,9 +6,15 @@ import {
 } from '../../selftest/featureFlags'
 import { useSelfTestStore } from '../../selftest/selfTestStore'
 import { useTradingStore } from '../../store/tradingStore'
+import {
+  getTradingWorkspaceSlot,
+  listTradingWorkspaceSlots,
+  validateTradingWorkspaceCatalog,
+} from '../../domain/tradingWorkspaceCatalog'
+import { readWorkspaceIdFromUrl } from '../../workspace/tradingWorkspaceUrl'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from '../../selftest/types'
 
-type TabId = 'checks' | 'audit' | 'flags' | 'stopmit'
+type TabId = 'checks' | 'audit' | 'flags' | 'stopmit' | 'workspace'
 
 function statusLabel(s: SelfTestStatus): string {
   return s === 'pass' ? 'PASS' : s === 'warn' ? 'WARN' : 'FAIL'
@@ -79,6 +85,22 @@ export function DiagnosticsPanel() {
   const runCritical = useSelfTestStore((s) => s.runCritical)
 
   const flagValidation = useMemo(() => validateSpeedOrderFeatureFlags(), [])
+  const workspaceValidation = useMemo(() => validateTradingWorkspaceCatalog(), [])
+  const workspaceSlots = useMemo(() => listTradingWorkspaceSlots(), [])
+  const activeWorkspaceId = useTradingStore((s) => s.activeWorkspaceId)
+  const activeWorkspaceCategoryId = useTradingStore((s) => s.activeWorkspaceCategoryId)
+  const workspaceLayoutPreset = useTradingStore((s) => s.workspaceLayoutPreset)
+  const workspaceOrderFormTab = useTradingStore((s) => s.workspaceOrderFormTab)
+  const workspacePositionPanelPreset = useTradingStore((s) => s.workspacePositionPanelPreset)
+  const workspaceUrlInSync = useTradingStore((s) => s.workspaceUrlInSync)
+  const workspaceUrlFallbackUsed = useTradingStore((s) => s.workspaceUrlFallbackUsed)
+  const workspaceUrlQueryRaw = useTradingStore((s) => s.workspaceUrlQueryRaw)
+  const activeSlot = useMemo(
+    () => getTradingWorkspaceSlot(activeWorkspaceId),
+    [activeWorkspaceId],
+  )
+  const urlWorkspaceId =
+    typeof window !== 'undefined' ? readWorkspaceIdFromUrl() : null
   const stopMitDraft = useTradingStore((s) => s.stopMitDraft)
   const audit = useMemo(() => {
     void auditTick
@@ -139,6 +161,7 @@ export function DiagnosticsPanel() {
             ['audit', 'Audit trail'],
             ['flags', 'Feature flags'],
             ['stopmit', 'Stop/MIT lock'],
+            ['workspace', 'Workspace'],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -227,6 +250,63 @@ export function DiagnosticsPanel() {
                     : '—'}
                 </span>
               </li>
+            </ul>
+          </div>
+        )}
+
+        {tab === 'workspace' && (
+          <div className="space-y-2 text-[10px]">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={workspaceValidation.ok ? 'pass' : 'fail'} />
+              <span>
+                categories {workspaceValidation.categoryCount} · slots {workspaceValidation.slotCount}
+                · invalid {workspaceValidation.invalidCount}
+              </span>
+            </div>
+            <ul className="mb-2 divide-y divide-so-border rounded border border-so-border font-mono">
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">activeWorkspaceId</span>
+                <span>{activeWorkspaceId}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">activeCategoryId</span>
+                <span>{activeWorkspaceCategoryId}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">url query</span>
+                <span>{workspaceUrlQueryRaw ?? urlWorkspaceId ?? '—'}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">url in sync</span>
+                <span className={workspaceUrlInSync ? 'text-so-bid' : 'text-so-ask'}>
+                  {String(workspaceUrlInSync)}
+                </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">url fallback used</span>
+                <span>{String(workspaceUrlFallbackUsed)}</span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">layout / form / position</span>
+                <span>
+                  {workspaceLayoutPreset} · {workspaceOrderFormTab} · {workspacePositionPanelPreset}
+                </span>
+              </li>
+              <li className="flex justify-between px-2 py-1">
+                <span className="text-so-muted">orderBookPreset</span>
+                <span>{activeSlot?.orderBookPreset ?? '—'}</span>
+              </li>
+            </ul>
+            <p className="text-so-muted">
+              mockOnly: {workspaceSlots.every((s) => s.mockOnly) ? 'true (all)' : 'mixed'}
+            </p>
+            <ul className="max-h-[160px] divide-y divide-so-border overflow-auto rounded border border-so-border font-mono">
+              {workspaceSlots.map((s) => (
+                <li key={s.workspaceId} className="px-2 py-1">
+                  <span className="text-zinc-200">{s.workspaceId}</span>
+                  <span className="text-so-muted"> — {s.displayName}</span>
+                </li>
+              ))}
             </ul>
           </div>
         )}

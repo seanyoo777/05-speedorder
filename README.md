@@ -1,73 +1,34 @@
-# React + TypeScript + Vite
+# 05-SpeedOrder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+공통 mock 주문·호가 엔진 (HTS형 UI). **실거래 API 없음.**
 
-Currently, two official plugins are available:
+## 개발 서버
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+| 항목 | 값 |
+|------|-----|
+| **URL** | [http://localhost:5105/](http://localhost:5105/) |
+| **포트** | `5105` (`vite.config.ts`, `strictPort: true`) |
+| **고정 이유** | TGX / MockInvest / UTE와 병행 개발 시 포트 충돌 방지 |
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+포트가 이미 사용 중이면 Vite가 종료됩니다. 다른 프로세스를 종료하거나 `vite.config.ts`의 `port`를 조정하세요.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 검증
+
+```bash
+npm run lint
+npm run build
+npm run test    # vitest + smoke
+npm run smoke   # headless self-test only
 ```
+
+## 문서
+
+- [MASTER_MANUAL.md](MASTER_MANUAL.md) — 통합 진입점
+- [ARCHITECTURE.md](ARCHITECTURE.md) — 폴더·컴포넌트
+- [docs/SELF_TEST.md](docs/SELF_TEST.md) — Diagnostics / smoke
+- [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) — 자산군별 거래창 (**W2** Launcher + `?workspaceId=` 연동)

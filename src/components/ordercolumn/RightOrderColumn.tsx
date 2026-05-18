@@ -1,12 +1,11 @@
-import { useState } from 'react'
 import { OrderBookPanel } from '../orderbook/OrderBookPanel'
 import { SpeedOrderPanel } from '../speedorder/SpeedOrderPanel'
 import { StopMitOrderPanel } from '../stopmit/StopMitOrderPanel'
-
-type TabId = 'standard' | 'stopMit'
+import { useTradingStore } from '../../store/tradingStore'
 
 export function RightOrderColumn() {
-  const [tab, setTab] = useState<TabId>('standard')
+  const tab = useTradingStore((s) => s.workspaceOrderFormTab)
+  const setWorkspaceOrderFormTab = useTradingStore((s) => s.setWorkspaceOrderFormTab)
 
   return (
     <div className="flex min-h-0 flex-col gap-2">
@@ -17,7 +16,7 @@ export function RightOrderColumn() {
           className={`flex-1 rounded px-2 py-1.5 text-[11px] ${
             tab === 'standard' ? 'bg-so-border text-white' : 'text-so-muted hover:text-white'
           }`}
-          onClick={() => setTab('standard')}
+          onClick={() => setWorkspaceOrderFormTab('standard')}
         >
           일반 주문
         </button>
@@ -26,7 +25,7 @@ export function RightOrderColumn() {
           className={`flex-1 rounded px-2 py-1.5 text-[11px] ${
             tab === 'stopMit' ? 'bg-so-border text-white' : 'text-so-muted hover:text-white'
           }`}
-          onClick={() => setTab('stopMit')}
+          onClick={() => setWorkspaceOrderFormTab('stopMit')}
         >
           스탑로스 + MIT
         </button>

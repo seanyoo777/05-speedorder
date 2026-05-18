@@ -11,6 +11,8 @@ import {
   aggregateResultsWithCore,
 } from './speedOrderSelfTestCoreAdapter'
 import { runStopMitDraftChecks } from './stopMitDraftChecks'
+import { runTradingWorkspaceChecks } from './tradingWorkspaceChecks'
+import { runTradingWorkspaceW2Checks } from './tradingWorkspaceW2Checks'
 import type { SelfTestCheckResult, SelfTestStatus, SelfTestSummary } from './types'
 
 export type SelfTestRunOptions = {
@@ -193,7 +195,12 @@ export function runSpeedOrderSelfTest(
     checkWebSocketStub(),
     checkEngineExports(),
     checkSymbolRegistry(),
+    ...runTradingWorkspaceChecks(),
   ]
+
+  if (storeRunner) {
+    results.push(...runTradingWorkspaceW2Checks(storeRunner))
+  }
 
   if (state) {
     results.push(checkStoreBootstrap(state), checkVendorSnapshot(state))

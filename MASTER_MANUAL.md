@@ -52,6 +52,7 @@ See [docs/TGX_INTEGRATION.md](docs/TGX_INTEGRATION.md).
 | [docs/TGX_INTEGRATION.md](docs/TGX_INTEGRATION.md) | Embedding steps and import discipline |
 | [docs/HTS_ENGINE_STRUCTURE.md](docs/HTS_ENGINE_STRUCTURE.md) | HTS UX vs engine separation |
 | [docs/SELF_TEST.md](docs/SELF_TEST.md) | Self-Test Center, diagnostics, audit trail, smoke |
+| [docs/TRADING_WORKSPACE.md](docs/TRADING_WORKSPACE.md) | Workspace catalog (**W1**) + Launcher/URL/presets (**W2**) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Full stack and folder map |
 
 ## Changelog (vendor reuse prep)

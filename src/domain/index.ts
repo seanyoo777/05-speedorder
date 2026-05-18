@@ -43,6 +43,28 @@ export {
   createEmptyStopMitDraft,
   applyStopMitDraftPatch,
 } from './stopMitDraft'
+export type {
+  TradingWorkspaceCategoryId,
+  TradingWorkspaceCategory,
+  TradingWorkspaceSlot,
+  TradingWorkspaceSlotIndex,
+  WorkspaceLayoutPresetId,
+  OrderBookPresetId,
+  OrderFormPresetId,
+  PositionPanelPresetId,
+  TradingWorkspaceCatalogValidation,
+} from './tradingWorkspace'
+export { buildWorkspaceId, parseWorkspaceId } from './tradingWorkspace'
+export {
+  TRADING_WORKSPACE_CATEGORIES,
+  TRADING_WORKSPACE_SLOTS,
+  listTradingWorkspaceCategories,
+  listTradingWorkspaceSlots,
+  getTradingWorkspaceSlot,
+  getTradingWorkspaceCategory,
+  listSlotsByCategory,
+  validateTradingWorkspaceCatalog,
+} from './tradingWorkspaceCatalog'
 export {
   DEFAULT_RISK_SNAPSHOT,
   deriveRiskSnapshotFromPositions,

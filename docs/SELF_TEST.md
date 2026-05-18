@@ -33,6 +33,26 @@ Overall status = worst of all checks. **issue count** = warn + fail.
 | `stop-mit-manual-overrides` | `setManualPrice` → `source: manual`, lock kept |
 | `stop-mit-consume-pending-trigger` | `orderBookPendingTriggerPrice` → draft lock + pending cleared |
 
+### Trading workspace W2
+
+| ID | Validates |
+|----|-----------|
+| `workspace-url-fallback` | Invalid `workspaceId` → `domestic_futures:1` |
+| `workspace-preset-valid` | All `orderBookPreset` in design registry |
+| `workspace-active-slot` | `activateWorkspace` sets `activeWorkspaceId` |
+| `workspace-symbol-seed` | `crypto:1` → `BTCUSDT` + book preset |
+| `workspace-apply-slot-api` | Form tab + confirmOrders wiring |
+| `workspace-no-api-no-websocket` | Policy remains mock_demo |
+
+### Trading workspace catalog (W1)
+
+| ID | Validates |
+|----|-----------|
+| `workspace-catalog-complete` | 5 categories, 15 slots, `validateTradingWorkspaceCatalog().ok` |
+| `workspace-id-unique` | No duplicate `workspaceId` |
+| `workspace-mock-only` | All slots `mockOnly === true` |
+| `workspace-category-slot-count` | 3 slots per category |
+
 ### Core
 
 1. Order execution policy (`mock_demo`, live flags false)
